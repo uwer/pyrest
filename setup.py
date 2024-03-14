@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
-from pyrest import __version__
+
 
 setup(
     name='pyrest',
-    version=__version__,
+    version='0.9',
     package_dir = {"": "src"},
     
     url='https://github.com/uwer/pyrest',
