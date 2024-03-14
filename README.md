@@ -1,4 +1,4 @@
-restbase-py
+pyrest
 ============
 
 Python base client for REST API
