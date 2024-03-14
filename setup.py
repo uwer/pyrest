@@ -12,8 +12,7 @@ setup(
     author_email='ur@gmail.com',
     install_requires=[
         "six",
-        "certifi",
-        "mimetypes",        
+        "certifi",        
     ],
     
     packages=find_packages(where='src'),
