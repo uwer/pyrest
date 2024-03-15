@@ -6,6 +6,7 @@ setup(
     name='pyrest',
     version='0.9',
     package_dir = {"": "src"},
+    python_requires=">=3.8",
     
     url='https://github.com/uwer/pyrest',
     author='UR',
