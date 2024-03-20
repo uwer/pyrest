@@ -105,6 +105,8 @@ class RESTClient(object):
                 key_file=configuration.key_file,
                 **addition_pool_args
             )
+            
+    
 
     def request(self, method, url, query_params=None, headers=None,
                 body=None, post_params=None, _preload_content=True,
@@ -294,7 +296,7 @@ class RESTClient(object):
 
 class ApiException(Exception):
 
-    def __init__(self, status=None, reason=None, http_resp=None):
+    def __init__(self, status=None, reason=None, http_resp=None, body = None):
         if http_resp:
             self.status = http_resp.status
             self.reason = http_resp.reason
@@ -303,7 +305,7 @@ class ApiException(Exception):
         else:
             self.status = status
             self.reason = reason
-            self.body = None
+            self.body = body
             self.headers = None
 
     def __str__(self):
@@ -395,6 +397,14 @@ class ApiClient(object):
 
     def set_default_header(self, header_name, header_value):
         self.default_headers[header_name] = header_value
+
+    def replyOK(self, status):
+        return 200 <= status < 299
+    
+    def createException(self, reason, status, body = None):
+        return ApiException(reason=reason, status=status, body=body)
+        
+        
 
     def __call_api(
             self, resource_path, method, path_params=None,
@@ -816,6 +826,8 @@ class ApiClient(object):
                     raise ValueError(
                         'Authentication token must be in `query` or `header`'
                     )
+                    
+    
 
     def __deserialize_file(self, response):
         """Deserializes body to file

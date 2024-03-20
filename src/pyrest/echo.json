@@ -1,0 +1,4 @@
+{
+"instance":{"class":"pyrest.service.EchoHandler"},
+"config":{}
+}

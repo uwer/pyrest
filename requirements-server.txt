@@ -1,0 +1,13 @@
+
+typing_extensions
+pydantic
+uvicorn
+starlette
+anyio
+fastapi
+classy_fastapi
+h11
+click 
+sniffio
+python-multipart
+prometheus-client

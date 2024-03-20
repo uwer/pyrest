@@ -13,7 +13,7 @@ setup(
     author_email='ur@gmail.com',
     install_requires=[
         "six",
-        "certifi",        
+        "certifi",      
     ],
     
     packages=find_packages(where='src'),
