@@ -1,6 +1,8 @@
 from setuptools import setup, find_packages
 
 
+## 
+## this sets up the client only!
 
 setup(
     name='pyrest',

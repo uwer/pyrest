@@ -12,10 +12,11 @@ It modeled after the swagger REST client and does also support pydantic models i
 This package is a library to be build on, if not use call to cal_api(...)
 
 It provides to entry points:
-build a REST API clinet simply by extending  the APIClient and map path to function without the need of decorators.
+build a REST API client simply by extending  the APIClient and map path to function without the need of decorators.
 
 
 build a REST Server without the need of setting up protocols and server components, simply provide a single callable which gets handed a subset of path operations. Alternatively replace the Routable object under FastAPI to implement more complex behaviour.
+Needless to say that what ever delegate wants to be instantiated, it needs to be available/in the path. 
 
 To extend the docker image, tag and build ontop with your handler code, provide handler config as in pyrest/echo.json
 

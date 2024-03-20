@@ -5,25 +5,9 @@ from classy_fastapi import ( Routable,
                              put, post
                              )
 
-from fastapi import Request,UploadFile,File,Path
+from fastapi import Request,UploadFile,File
 from typing import Any
 
-#from scipy.stats._discrete_distns import geom
-
-'''
-def maintest():
-    import uvicorn
-    from fastapi import FastAPI
-
-    from qgisAPI3.delegates import APIDelegate
-    
-    app = FastAPI()
-    routes = APIDelegate()
-    # router member inherited from cr.Routable and configured per the annotations.
-    app.include_router(routes.router)
-
-    uvicorn.run(app,port=9888)
-'''
     
     
 class EchoHandler():
@@ -32,24 +16,24 @@ class EchoHandler():
         pass
     
     
-    def __call__(self,key,bbody = None ,query = None, fileref = None):
+    def __call__(self,key,**kwargs ):
         body = None
+        fileref = None
         q = {}
-        if bbody:
-            body = bbody.decode()
+        if "body" in kwargs:
+            body = kwargs["body"].decode()
         
-        if query:
-            q  = query
+        if "query" in kwargs:
+            q  = kwargs["query"]
             
-        if fileref:
-            if hasattr(fileref,'name'):
+        if "fileref" in kwargs:
+            if hasattr(kwargs["fileref"],'name'):
                 try:
-                    print ("received file like {}".format(fileref.name))
+                    print ("received file like {}".format(kwargs["fileref"].name))
                 except:
-                    print ("received file reference {}".format(str(fileref)))
+                    print ("received file reference {}".format(str(kwargs["fileref"])))
         
-        print ("received query {}".format(q))
-        res = {"key":key,"body":body if body else "","query":{**q} }
+        res = {"key":key,"body":body if body else "","query":{**q} ,"fileref": fileref if fileref else ""}
         
         try:
             if "wait" in q:
@@ -57,7 +41,7 @@ class EchoHandler():
             
         except :
             print ("wait failed")
-        print ("received key {key} with body {body} and query {query}".format(**res))
+        print ("received for echo: {}".format(res))
         return res
         
 
@@ -82,9 +66,9 @@ class APIDelegate(Routable):
         #print("submit  - {}".format(body))
         try:
             with stopwatch("process",""):
-                return self._handler('process',request.body,request.query_params())
+                return self._handler('process',body=request.body,query=request.query_params())
     
-        except Exception as e:
+        except :
             import traceback
             traceback.print_exc()
             
@@ -99,9 +83,9 @@ class APIDelegate(Routable):
         #print("lookup  - {} ".format(request))
         try:
             with stopwatch("lookup",""):
-                return self._handler('lookup',None,request.query_params)
+                return self._handler('lookup',query=request.query_params)
     
-        except Exception as e:
+        except :
             import traceback
             traceback.print_exc()
             
@@ -123,9 +107,9 @@ class APIDelegate(Routable):
         try:
             with stopwatch("put data",""):
                 data = await request.body()
-                return self._handler('data',data,request.query_params)
+                return self._handler('data',body=data,query=request.query_params)
     
-        except Exception as e:
+        except :
             import traceback
             traceback.print_exc()
             
@@ -154,7 +138,7 @@ class APIDelegate(Routable):
                     fd.write(content)
                     content = upload_file.file.read(1024)
                 fd.seek(0)
-                return self._handler('data',fd)
+                return self._handler('data',fileref=fd)
             
 
 
@@ -206,7 +190,7 @@ def _instanceFromConfig(config):
     '''
     clazz =_class(config["instance"]["class"])
     if not clazz:
-        raise ValueError("could not create {}".format(config))
+        raise ValueError(f"could not create delegate from {config}")
     
     return clazz(config["config"])
 
@@ -225,10 +209,19 @@ def app():
         app = FastAPI()
         
         with open(os.getenv('HANDLERCONFIG'),'r') as fp:
-            config = json.load(fp)
+            #slines = fp.readlines()
+            #lines = "".join(lines)
+            lines = fp.read()
+            lines = os.path.expandvars(lines)
+            config = json.loads(lines)
         
-        
-        routes = APIDelegate(_instanceFromConfig(config))
+        delegate = _instanceFromConfig(config)
+        # test if the delegate implements routes itself, otherwise we assume a handler that is callable
+        if isinstance(delegate,Routable):
+            routes = delegate
+        else:
+            routes = APIDelegate(delegate)
+            
         # router member inherited from cr.Routable and configured per the annotations.
         app.include_router(routes.router)
         return app
