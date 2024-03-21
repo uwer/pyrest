@@ -209,11 +209,7 @@ def app():
         app = FastAPI()
         
         with open(os.getenv('HANDLERCONFIG'),'r') as fp:
-            #slines = fp.readlines()
-            #lines = "".join(lines)
-            lines = fp.read()
-            lines = os.path.expandvars(lines)
-            config = json.loads(lines)
+            config = json.load(fp)
         
         delegate = _instanceFromConfig(config)
         # test if the delegate implements routes itself, otherwise we assume a handler that is callable
