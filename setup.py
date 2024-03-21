@@ -15,7 +15,8 @@ setup(
     author_email='ur@gmail.com',
     install_requires=[
         "six",
-        "certifi",      
+        "certifi",  
+        "urllib3",    
     ],
     
     packages=find_packages(where='src'),
