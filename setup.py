@@ -16,7 +16,8 @@ setup(
     install_requires=[
         "six",
         "certifi",  
-        "urllib3",    
+        "urllib3", 
+        "httpx",   
     ],
     
     packages=find_packages(where='src'),

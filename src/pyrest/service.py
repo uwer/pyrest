@@ -215,6 +215,9 @@ def app():
         # test if the delegate implements routes itself, otherwise we assume a handler that is callable
         if isinstance(delegate,Routable):
             routes = delegate
+            if not hasattr(routes, "router"):
+                print ("Found Routable but it appears not to have a 'router', did you forget to call super().__init__()?!")
+                raise ValueError("Found Routable, not setup properly! (did you forget to call super.init)")
         else:
             routes = APIDelegate(delegate)
             
