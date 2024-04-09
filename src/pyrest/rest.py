@@ -366,10 +366,13 @@ class ApiClient(object):
     
 
     def __init__(self, configuration=None, header_name=None, header_value=None,
-                 cookie=None):
+                 cookie=None, baseurl = None):
         if configuration is None:
             from pyrest.configuration import Configuration
             configuration = Configuration()
+            if not baseurl is None:
+                configuration.host = baseurl
+            
         self.configuration = configuration
 
         self.pool = ThreadPool()

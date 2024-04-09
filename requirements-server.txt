@@ -1,6 +1,6 @@
 
 typing_extensions
-pydantic
+pydantic>=2.6
 uvicorn
 starlette
 anyio
