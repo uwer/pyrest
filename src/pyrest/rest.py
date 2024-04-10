@@ -162,7 +162,7 @@ class RESTClient(object):
                     request_body = '{}'
                     if body is not None:
                         request_body = json.dumps(body)
-                    print(f"{method} , {url},{request_body}, {headers}")
+                    #print(f"{method} , {url},{request_body}, {headers}")
                     r = self.pool_manager.request(
                         method, url,
                         body=request_body,
@@ -382,7 +382,7 @@ class ApiClient(object):
             self.default_headers[header_name] = header_value
         self.cookie = cookie
         # Set default User-Agent.
-        self.user_agent = 'APIC-1.0.0' # deliberately nonsense
+        self.user_agent = 'APYC-1.0.0' # deliberately nonsense
 
     def __del__(self):
         if hasattr(self, 'pool') and self.pool:
@@ -484,7 +484,9 @@ class ApiClient(object):
             return (return_data)
         else:
             return (return_data, response_data.status,
-                    response_data.getheaders())
+                    self.clean_params_for_auth(response_data.getheaders(),auth_settings))
+            
+            
 
     def sanitize_for_serialization(self, obj):
         """Builds a JSON POST object.
@@ -830,7 +832,28 @@ class ApiClient(object):
                         'Authentication token must be in `query` or `header`'
                     )
                     
+    def clean_params_for_auth(self, headers, auth_settings):
+        """removes header and params based on authentication setting.
+            to avoid sending them as error
+
+        :param headers: Header parameters dict to be updated.
+        :param auth_settings: Authentication setting identifiers list.
+        """
+        if not auth_settings:
+            return headers
+        
+        from copy import deepcopy
+        h2 = deepcopy(headers)
+        for auth in auth_settings:
+            auth_setting = self.configuration.auth_settings().get(auth)
+            if auth_setting:
+                if not auth_setting['value']:
+                    continue
+                elif auth_setting['in'] == 'header':
+                    if auth_setting['key'] in h2:
+                        del h2[auth_setting['key']]
     
+        return h2
 
     def __deserialize_file(self, response):
         """Deserializes body to file
