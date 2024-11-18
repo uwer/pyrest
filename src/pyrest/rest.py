@@ -366,7 +366,7 @@ class ApiClient(object):
     
 
     def __init__(self, configuration=None, header_name=None, header_value=None,
-                 cookie=None, baseurl = None):
+                 cookie=None, baseurl = None,maxsize=4):
         if configuration is None:
             from pyrest.configuration import Configuration
             configuration = Configuration()
@@ -376,7 +376,7 @@ class ApiClient(object):
         self.configuration = configuration
 
         self.pool = ThreadPool()
-        self.rest_client = RESTClient(configuration)
+        self.rest_client = RESTClient(configuration,maxsize=maxsize)
         self.default_headers = {}
         if header_name is not None:
             self.default_headers[header_name] = header_value
