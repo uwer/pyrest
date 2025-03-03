@@ -411,35 +411,37 @@ class GSAPIClient(ApiClient):
 class GSAuthClient(GSAPIClient):
         
     def __init__(self,apiconnection):
+        
+        GSAPIClient.__init__(self, apiconnection)
         self._query_api_key_name = self._apiconnection["auth"]
         self._query_api_key = self._apiconnection["auth-key"]
         
-        GSAPIClient.__init__(self, apiconnection)
+        
 
         
         
         
 
     
-        def call_api(self, resource_path, method,
-                 path_params=None, query_params=None, header_params=None,
-                 body=None, post_params=None, files=None,
-                 response_type=object, auth_settings=None, async_req=None,
-                 _return_http_data_only=True, collection_formats=None,
-                 _preload_content=True, _request_timeout=None, _raise_error= False):
+    def call_api(self, resource_path, method,
+             path_params=None, query_params=None, header_params=None,
+             body=None, post_params=None, files=None,
+             response_type=object, auth_settings=None, async_req=None,
+             _return_http_data_only=True, collection_formats=None,
+             _preload_content=True, _request_timeout=None, _raise_error= False):
+    
         
+        if query_params:
+            # allow overriding and ensure its not doubling up
+            query_params = {**{self._query_api_key_name:self._query_api_key},**query_params}
+        else:
+            query_params = {self._query_api_key_name:self._query_api_key}
             
-            if query_params:
-                # allow overriding and ensure its not doubling up
-                query_params = {**{self._query_api_key_name:self._query_api_key},**query_params}
-            else:
-                query_params = {self._query_api_key_name:self._query_api_key}
-                
-            return super().call_api(resource_path, method, path_params, query_params, 
-                             header_params, body, post_params, files, response_type, 
-                             auth_settings, async_req, _return_http_data_only, 
-                             collection_formats, _preload_content, 
-                             _request_timeout, _raise_error)
+        return super().call_api(resource_path, method, path_params, query_params, 
+                         header_params, body, post_params, files, response_type, 
+                         auth_settings, async_req, _return_http_data_only, 
+                         collection_formats, _preload_content, 
+                         _request_timeout, _raise_error)
             
 class GSOWSClient(GSAPIClient):
         
@@ -461,9 +463,12 @@ class GSOWSClient(GSAPIClient):
         logme("OWS {}".format(self._owsconnection))
         super()._printConnection()
         
-    def getCapabilities(self, service = "WFS"):
-        # bypass call_api
-        restreply = self.rest_client.request(GSAPIClient.GET, "{}/{}".format(self._owsconnection,service), {"service":service,"version":_versionForService(service),"request":"GetCapabilities"})
+    def getCapabilities(self, service = "WFS", workspace = None):
+        # bypass call_api,,"version":_versionForService(service)
+        if workspace:
+            restreply = self.rest_client.request(GSAPIClient.GET, "{}/{}/{}".format(self._owsconnection,str(workspace).lower()/service.lower()), {"service":service,"request":"GetCapabilities"})
+        else:
+            restreply = self.rest_client.request(GSAPIClient.GET, "{}/{}".format(self._owsconnection,service.lower()), {"service":service,"request":"GetCapabilities"})
         if restreply.status == 200:
             return restreply.data
 
