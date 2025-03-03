@@ -476,7 +476,7 @@ class GSOWSClient(GSAPIClient):
         return None
     
     
-def createAndPublishCOG(gsclient,ws,store, layer, url, abstract=""):
+def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle = None):
     storedef = {
     "coverageStore": {
         "name": store,
@@ -514,6 +514,9 @@ def createAndPublishCOG(gsclient,ws,store, layer, url, abstract=""):
     res = gsclient.createCoverage(ws,store, layerdef)
     print(res)
     
+    
+    if defaultStyle:
+        gsclient.setLayerDefaultStyle(layer,defaultStyle)
     
     
 def createCOGImageStore(gsclient,tempdir, workspaceName,storeName, imagelist,baseurl, timepattern='[0-9]{8}'):
