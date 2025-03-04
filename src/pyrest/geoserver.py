@@ -508,7 +508,7 @@ def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle
             "name": ws
         },
         "metadata": {
-            "entry": {
+            "entry": {        
                 "@key": "CogSettings.Key",
                 "cogSettings": {
                     "useCachingStream": False,
@@ -537,8 +537,8 @@ def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle
     logme(res)
     
     
-    if defaultStyle:
-        gsclient.setLayerDefaultStyle(layer,defaultStyle)
+    #if defaultStyle:
+    #    gsclient.setLayerDefaultStyle(layer,defaultStyle)
     
     
 def createCOGImageStore(gsclient,tempdir, workspaceName,storeName, imagelist,baseurl, timepattern='[0-9]{8}'):
