@@ -158,12 +158,12 @@ class GSAPIClient(ApiClient):
         #print(result)
         if not 200 <= result[1] < 299:
             #print(result[0])
-            print(f"received  failure code {result[1:]}")
+            print(f"received  failure code {result[1:]} on path {resource_path} {path_params} {result[0]}")
             if not _return_http_data_only:
                 return  result[0]
             return None
-        elif result[1] > 299:
-            print(f"received error code {result[1:]}")
+        elif result[1] > 299: # this will never be called ....
+            print(f"received error code {result[1:]} on path {resource_path} {path_params} {result[0]}")
             return None
         return  result[0]
     
@@ -329,7 +329,26 @@ class GSAPIClient(ApiClient):
     def setLayerDefaultStyle(self,layer, stylename):
         self.call_api(f"/layers/{layer}.xml",  GSAPIClient.PUT,body=f"<layer><defaultStyle><name>{stylename}</name></defaultStyle></layer>",header_params = {"Content-Type":"text/xml"})
         
+    def addLayerStyle(self,layer, stylename, stylefile, defaultStyle = False):
+        self.call_api(f"/layers/{layer}/styles",  GSAPIClient.POST,
+                      body=f'<?xml version="1.0" encoding="UTF-8"?><StyleInfoPost><name>{stylename}</name><filename>{stylefile}</filename></StyleInfoPost>',
+                      header_params = {"Content-Type":"application/xml"},
+                      query_params={"default":defaultStyle})
+
         
+    def getLayerStyles(self,layer,workspace = None):
+        if workspace:
+            layerdat = self.call_api(f"/workspaces/{workspace}/layers/{layer}/styles", GSAPIClient.GET)
+        else:
+            layerdat = self.call_api(f"/layers/{layer}/styles", GSAPIClient.GET)
+        
+        return layerdat
+        
+    def addStyle(self, stylename, stylefile):
+        self.call_api("/styles",  GSAPIClient.POST,
+                      body=f'<?xml version="1.0" encoding="UTF-8"?><StyleInfoPost><name>{stylename}</name><filename>{stylefile}</filename></StyleInfoPost>',
+                      header_params = {"Content-Type":"application/xml"})
+    
     """
     def updateStyle(self,workspaceName,storeName, data):
         stores = self.call_api(f"/workspaces/{workspaceName}/coveragestores/{storeName}", GSAPIClient.PUT,body=data)
@@ -477,13 +496,16 @@ class GSOWSClient(GSAPIClient):
     
     
 def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle = None):
+    
+    gsclient.createWorkspace(ws)
+    
     storedef = {
     "coverageStore": {
         "name": store,
         "type": "GeoTIFF",
         "enabled": True,
         "workspace": {
-            "name": "cog"
+            "name": ws
         },
         "metadata": {
             "entry": {
@@ -500,7 +522,7 @@ def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle
 
     
     res = gsclient.createCoverageStore(ws, storedef)
-    print(res)
+    logme(res)
     
     layerdef = {"coverage": {
         "name": layer,
@@ -512,7 +534,7 @@ def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle
     
         }}
     res = gsclient.createCoverage(ws,store, layerdef)
-    print(res)
+    logme(res)
     
     
     if defaultStyle:
@@ -561,14 +583,14 @@ def createCOGImageStore(gsclient,tempdir, workspaceName,storeName, imagelist,bas
     
     # ignore if exists
     res = gsclient.createWorkspace(workspaceName)
-    print(res)
+    logme(res)
     
     
     res = gsclient.buildCoverageStoreAndType(workspaceName,storeName,"imagemosaic", zipdata ,params={"configure":"none"})
     print(res)
     
     res = gsclient.createCoverageProtoypeRemote(workspaceName,storeName,ensureURLPath(baseurl,imagelist[0]))
-    print(res)
+    logme(res)
     
 
     res = gsclient.updateCoverage(workspaceName,storeName,f'''<coverage><name>{storeName}</name>
@@ -587,12 +609,12 @@ def createCOGImageStore(gsclient,tempdir, workspaceName,storeName, imagelist,bas
     </entry>
   </metadata>
 </coverage>''')
-    print(res)
+    logme(res)
         
     # add the rest of the references, we should have at least 2 ...
     for i in range(1,len(imagelist)):
         res = gsclient.createCoverageProtoypeRemote(workspaceName,storeName,ensureURLPath(baseurl,imagelist[i]))
-        print(res)
+        logme(res)
     
     
         
