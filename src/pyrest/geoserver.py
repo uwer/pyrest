@@ -421,8 +421,14 @@ class GSAPIClient(ApiClient):
         ws = self.call_api(f"/workspaces", GSAPIClient.POST, body={"workspace": {"name": workspaceName}},**kwargs)
         return ws
     
+    def testWorkspace(self,workspaceName, **kwargs):
+        ws = self.call_api(f"/workspaces/{workspaceName}", GSAPIClient.GET,query_params={"quietOnNotFound":True})
+        if ws is None:
+            return self.createWorkspace(workspaceName, **kwargs)
+        return ws
     
-    def clearTMPWorkspace(self,ws="tmp"):
+    
+    def clearWorkspace(self,ws="tmp"):
         res = self.call_api(f"/workspaces/{ws}", GSAPIClient.DELETE, query_params={"recurse": True})
         return res
     
@@ -537,8 +543,8 @@ def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle
     logme(res)
     
     
-    #if defaultStyle:
-    #    gsclient.setLayerDefaultStyle(layer,defaultStyle)
+    if defaultStyle:
+        gsclient.setLayerDefaultStyle(layer,defaultStyle)
     
     
 def createCOGImageStore(gsclient,tempdir, workspaceName,storeName, imagelist,baseurl, timepattern='[0-9]{8}'):
