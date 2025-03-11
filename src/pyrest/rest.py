@@ -77,6 +77,9 @@ class RESTClient(object):
         if configuration.assert_hostname is not None:
             addition_pool_args['assert_hostname'] = configuration.assert_hostname  # noqa: E501
 
+        if configuration.timeout is not None:
+            addition_pool_args['timeout'] = configuration.timeout  # noqa: E501
+
         if maxsize is None:
             if configuration.connection_pool_maxsize is not None:
                 maxsize = configuration.connection_pool_maxsize
@@ -381,7 +384,7 @@ class ApiClient(object):
     
 
     def __init__(self, configuration=None, header_name=None, header_value=None,
-                 cookie=None, baseurl = None,maxsize=4):
+                 cookie=None, baseurl = None,maxpool=4):
         if configuration is None:
             from pyrest.configuration import Configuration
             configuration = Configuration()
@@ -391,7 +394,7 @@ class ApiClient(object):
         self.configuration = configuration
 
         self.pool = ThreadPool()
-        self.rest_client = RESTClient(configuration,maxsize=maxsize)
+        self.rest_client = RESTClient(configuration,pools_size=maxpool)
         self.default_headers = {}
         if header_name is not None:
             self.default_headers[header_name] = header_value

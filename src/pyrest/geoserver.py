@@ -117,9 +117,10 @@ class GSAPIClient(ApiClient):
         self.configuration = Configuration()
         self.configuration.host = self._apiconnection["url"]
         self.configuration.verify_ssl = False
-        self.configuration.connection_pool_maxsize = 2
+        self.configuration.setTimeout(10,60)
+        #self.configuration.connection_pool_maxsize = 2
         #'content-type': 'application/json; charset=utf-8'
-        ApiClient.__init__(self, self.configuration,maxsize=2)# this is the default ,header_name='content-type', header_value='application/json; charset=utf-8')
+        ApiClient.__init__(self, self.configuration,maxpool=2)# this is the default ,header_name='content-type', header_value='application/json; charset=utf-8')
         
         #,self._query_api_key_name:_query_api_key
 

@@ -1,9 +1,6 @@
 # coding: utf-8
 
 """
-    MAGDA API Documentation
-
-    This API documentation is for the open data platform MAGDA. REST is used. Unless stated otherwise, the JSON data format is used for all request and response body.  # noqa: E501
 
     OpenAPI spec version: 2.3.3
 
@@ -102,7 +99,14 @@ class Configuration():#six.with_metaclass(TypeWithDefault, object)):
         self.proxy = None
         # Safe chars for path_param
         self.safe_chars_for_path_param = ''
+        
+        self.timeout = None
 
+
+    def setTimeout(self, connect,read):
+        self.timeout =  urllib3.Timeout(connect=connect, read=read)
+        
+        
     @property
     def logger_file(self):
         """The logger file.
