@@ -336,6 +336,86 @@ class GSAPIClient(ApiClient):
                       header_params = {"Content-Type":"application/xml"},
                       query_params={"default":defaultStyle})
 
+
+    def setCoverageTemplate(self, data, template,workspace=None, storeName=None,coverage=None):
+        path = ""
+        if workspace:
+            path +=f"/workspaces/{workspace}"
+        if storeName:
+            path +="/coveragestores/{storeName}"   
+            if coverage:
+                path +=f"/coverages/{coverage}"   
+            
+        path +=f"/templates/{template}.ftl"   
+        res = self.call_api(path, GSAPIClient.PUT,body=data,header_params = {"Content-Type":"text/plain"})
+        return res
+    
+    
+    def setFeatureTemplate(self, data, template,workspace=None, storeName=None,feature=None):
+        path = ""
+        if workspace:
+            path +=f"/workspaces/{workspace}"
+        if storeName:
+            path +=f"/datastores/{storeName}"   
+            if feature:
+                path +=f"/featuretypes/{feature}"   
+            
+        path +=f"/templates/{template}.ftl"   
+        res = self.call_api(path, GSAPIClient.PUT,body=data,header_params = {"Content-Type":"text/plain"})
+        return res
+        
+    def getCoverageTemplate(self, template,workspace=None, storeName=None,coverage=None):
+        path = ""
+        if workspace:
+            path +=f"/workspaces/{workspace}"
+        if storeName:
+            path +=f"/coveragestores/{storeName}"   
+            if coverage:
+                path +=f"/coverages/{coverage}"   
+            
+        path +=f"/templates/{template}.ftl"   
+        res = self.call_api(path, GSAPIClient.GET)
+        return res
+        
+    def getFeatureTemplate(self, template,workspace=None, storeName=None,feature=None):
+        path = ""
+        if workspace:
+            path +=f"/workspaces/{workspace}"
+        if storeName:
+            path +=f"/datastores/{storeName}"   
+            if feature:
+                path +=f"/featuretypes/{feature}"   
+            
+        path +=f"/templates/{template}.ftl"   
+        res = self.call_api(path, GSAPIClient.GET)
+        return res
+
+    def deletetCoverageTemplate(self, template, workspace=None, storeName=None,coverage=None):
+        path = ""
+        if workspace:
+            path +=f"/workspaces/{workspace}"
+        if storeName:
+            path +=f"/coveragestores/{storeName}"   
+            if coverage:
+                path +=f"/coverages/{coverage}"   
+            
+        path +=f"/templates/{template}.ftl"   
+        res = self.call_api(path, GSAPIClient.DELETE)
+        return res
+        
+    def deleteFeatureTemplate(self, template,workspace=None, storeName=None,feature=None):
+        path = ""
+        if workspace:
+            path +=f"/workspaces/{workspace}"
+        if storeName:
+            path +=f"/datastores/{storeName}"   
+            if feature:
+                path +=f"/featuretypes/{feature}"   
+            
+        path +=f"/templates/{template}.ftl"   
+        res = self.call_api(path, GSAPIClient.DELETE)
+        return res
+    
         
     def getLayerStyles(self,layer,workspace = None):
         if workspace:
