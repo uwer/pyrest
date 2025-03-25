@@ -342,11 +342,12 @@ class GSAPIClient(ApiClient):
         if workspace:
             path +=f"/workspaces/{workspace}"
         if storeName:
-            path +="/coveragestores/{storeName}"   
+            path +=f"/coveragestores/{storeName}"   
             if coverage:
                 path +=f"/coverages/{coverage}"   
             
-        path +=f"/templates/{template}.ftl"   
+        path +=f"/templates/{template}.ftl"
+        print(f"template path {path}")
         res = self.call_api(path, GSAPIClient.PUT,body=data,header_params = {"Content-Type":"text/plain"})
         return res
     
@@ -582,7 +583,7 @@ class GSOWSClient(GSAPIClient):
         return None
     
     
-def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle = None):
+def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle = None, **kwargs):
     
     gsclient.createWorkspace(ws)
     
@@ -611,6 +612,7 @@ def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle
     res = gsclient.createCoverageStore(ws, storedef)
     logme(res)
     
+    
     layerdef = {"coverage": {
         "name": layer,
         "abstract":abstract,
@@ -620,6 +622,10 @@ def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle
         "nativeFormat": "GeoTIFF"
     
         }}
+    if kwargs and "coverage" in kwargs:
+        # we force local as that is what we are here for, making a COG raster
+        layerdef = {"coverage":{**layerdef["coverage"],**kwargs["coverage"],"nativeFormat": "GeoTIFF","name": layer}}
+        
     res = gsclient.createCoverage(ws,store, layerdef)
     logme(res)
     
