@@ -10,6 +10,7 @@ from pyrest.rest import ApiClient
 from pyrest.configuration import Configuration
 from copy import deepcopy
 from pyrest import logme, ensureURLPath
+from six.moves.urllib.parse import quote
 
 import sys,json
 
@@ -43,8 +44,52 @@ templatePostgisStore = {
         {"@key":"passwd","$":""},
 '''
 
-
-
+feturetypeinfo_template={
+  "name": "poi",
+  "nativeName": "poi",
+  "title": "",
+  "namespace": {},
+  "abstract": "",
+  "keywords": { "string": [] },
+  "metadataLinks": {"metadataLink": []},
+  "dataLinks": {"org.geoserver.catalog.impl.DataLinkInfoImpl": [ ] },
+  "srs": "EPSG:4326",
+  "projectionPolicy": "REPROJECT_TO_DECLARED",
+  "enabled": True,
+  "metadata": {"entry": [
+      {"@key": "kml.regionateStrategy",
+        "$": "external-sorting"},
+      {"@key": "kml.regionateFeatureLimit",
+       "$": "15"},
+      {"@key": "cacheAgeMax",
+        "$": "3000"},
+      {"@key": "cachingEnabled",
+        "$": "true"},
+      {"@key": "kml.regionateAttribute",
+       "$": "NAME"}
+    ]},
+  "cqlFilter": "INCLUDE",
+  "maxFeatures": 10000,
+  "numDecimals": 3,
+  "responseSRS": { "string": [4326] },
+  "overridingServiceSRS": True,
+  "skipNumberMatched": True,
+  "attributes": {"attribute": [{
+        "name": "the_geom",
+        "minOccurs": 0,
+        "maxOccurs": 1,
+        "nillable": True
+        
+      },
+      {},
+      {},
+      {}]}
+}
+bbox_dummy = {"minx":115.1689999999999969,
+                  "maxx":121.2570000000000050,
+                  "miny":-13.0000000000000000,
+                  "maxy":-8.7349999999999994,
+                  "crs": "EPSG:4326"}
 
 
 time_dim_enable_XML = ['<coverage><name>','</name><enabled>true</enabled><metadata><entry key="time"><dimensionInfo><enabled>true</enabled><presentation>LIST</presentation><units>ISO8601</units></dimensionInfo></entry></metadata></coverage>']
@@ -97,6 +142,39 @@ def _versionForService(service):
     if "WPS" == su:
         
         return "1.0.0"
+    
+    
+contenttypes = {"gpkg":{"Content-Type":"application/x-sqlite3"},
+                "style-sld":{"Content-Type":"application/vnd.ogc.sld+xml"},
+                "style-se":{"Content-Type":"application/vnd.ogc.sld+xml"},
+                "xml":{"Content-Type":"text/xml"},
+                "accept-json":{"accept":"application/json"},
+                "json":{"Content-Type":"application/json"},
+                "zip":{"Content-Type":"application/zip"},
+                }
+
+
+
+def contentType4suffix(suffix):
+    s = str(suffix).lower()
+    if '.zip' == s:
+        return contenttypes["zip"]
+    if '.gpkg' == s:
+        return contenttypes["gpkg"]
+    
+    if '.xml' == s:
+        return contenttypes["xml"]
+    
+    if '.sld' == s:
+        return contenttypes["style-sld"]
+    
+    
+    if '.json' == s or ".geojson" == s:
+        return contenttypes["json"]
+    
+    
+    return None
+    
     
 def _buildCreatePGStore(connection):
     pgstore = deepcopy(templatePostgisStore)
@@ -200,12 +278,12 @@ class GSAPIClient(ApiClient):
         layers = self.call_api(f"/workspaces/{workspaceName}/datastores/{storeName}/featuretypes", GSAPIClient.POST,body=data)
         return layers
     
-    def createFeatureType(self, workspaceName,data):
-        layers = self.call_api(f"/workspaces/{workspaceName}/featuretypes", GSAPIClient.POST,body=data)
+    def createFeatureType(self, workspaceName,data,**kwargs):
+        layers = self.call_api(f"/workspaces/{workspaceName}/featuretypes", GSAPIClient.POST,body=data,**kwargs)
         return layers
     
-    def updateFeatureType(self, workspaceName,storeName,featureTypeName, data):
-        layers = self.call_api(f"/workspaces/{workspaceName}/datastores/{storeName}/featuretypes/{featureTypeName}", GSAPIClient.PUT,body=data)
+    def updateFeatureType(self, workspaceName,storeName,featureTypeName, data,**kwargs):
+        layers = self.call_api(f"/workspaces/{workspaceName}/datastores/{storeName}/featuretypes/{featureTypeName}", GSAPIClient.PUT,body=data,**kwargs)
         return layers
     
     
@@ -222,11 +300,14 @@ class GSAPIClient(ApiClient):
         return stores
     
     
-    def buildFeatureStoreAndType(self,workspaceName,storeName, zipdata, headers = {"Content-Type":"application/zip"}):
+    def buildFeatureStoreAndType(self,workspaceName,storeName, zipdata, ftype = "shp", fname = "myshapefile.shp", headers = {"Content-Type":"application/zip"}, query = {"configure":"all"}):
         '''
         zipdata is binary data already!!!
         '''
-        stores = self.call_api(f"/workspaces/{workspaceName}/datastores/{storeName}", GSAPIClient.PUT,body=zipdata,header_params=headers)
+        from pathlib import Path
+        
+        stores = self.call_api(f"/workspaces/{workspaceName}/datastores/{storeName}/file.{ftype}", GSAPIClient.PUT,
+                               body=zipdata,header_params=headers,query_params=query)
         return stores
 
 
@@ -582,10 +663,110 @@ class GSOWSClient(GSAPIClient):
         print("Rest query failed status {} - reason {}, {}".format(restreply.status),restreply.data,restreply.reason)
         return None
     
+
+def createAndPublishFeature(gsclient,ws,store, layer, datafile, ftype = "shp",abstract="", doconfigure= False, srs="EPSG:4326", defaultStyle = 'None', **kwargs):
+    
+    gsclient.testWorkspace(ws)
+    
+    
+    storeconfig  = gsclient.getFeatureStore(ws,store)
+    if not storeconfig:
+        from pathlib import Path
+        fnamep = Path(datafile)
+        headers = contentType4suffix(".zip")
+        ct = contentType4suffix(fnamep.suffix)
+        if ct :
+            headers = ct
+        with fnamep.open('rb') as fp:
+            res = gsclient.buildFeatureStoreAndType(ws,store,fp.read(),ftype=ftype, query={"target":ftype,"configure":"all" if doconfigure else None,"filename":layer+f".{ftype}"},headers=headers)
+            print(res)
+        storeconfig  = gsclient.getFeatureStore(ws,store)
+    if  storeconfig is None:
+        raise ValueError("creating Feature Store failed")
+    
+    logme(storeconfig)
+    #{'dataStore': {'name': 'densityt36', 'type': 'Shapefile', 'enabled': True, 'workspace': {'name': 'tmp', 'href': 'http://localhost:9908/geoserver/rest/workspaces/tmp.json?npp-auth=364c9181-6e30-4cb6-b1ab-e67177a5024c'}, 'connectionParameters': {'entry': [{'@key': 'namespace', '$': 'tmp'}, {'@key': 'url', '$': 'file:/geoserver/data/npp/data/tmp/densityt36/'}]}, '_default': False, 'dateCreated': '2025-03-26 05:57:47.189 UTC', 'disableOnConnFailure': False, 'featureTypes': 'http://localhost:9908/geoserver/rest/workspaces/tmp/datastores/densityt36/featuretypes.json?npp-auth=364c9181-6e30-4cb6-b1ab-e67177a5024c'}}
+
+    storeconfig = storeconfig["dataStore"]
+    if "featureTypes" in storeconfig:
+        fetauretypes =  gsclient.getHREF({"href":storeconfig["featureTypes"]})
+        if isinstance(fetauretypes["featureTypes"], dict) and len(fetauretypes["featureTypes"]["featureType"]) > 0:
+            layer = fetauretypes["featureTypes"]["featureType"][0]["name"]
+        
+            testlayer = gsclient.getFeatureType(ws,store,layer)
+            testlayer = gsclient.getFeatureType(ws,store,quote(layer))
+            
+        else:
+        
+        
+            workspace = storeconfig["workspace"]
+            wsurl = workspace["href"]
+            enindex = wsurl.find(".json")
+            wsindex = wsurl.find("workspace")
+            wsstart = wsurl[:enindex]
+            wsend = wsurl[enindex:]
+            resstart = wsurl[:wsindex]
+            
+            featuretypeinfo = deepcopy(feturetypeinfo_template)
+            featuretypeinfo["name"] =  layer
+            featuretypeinfo["nativeName"] = layer
+            featuretypeinfo["title"] = layer
+            featuretypeinfo["store"] = {
+                        "@class": "dataStore",
+                        "name": "{}:{}".format(storeconfig["workspace"]["name"],storeconfig["name"]),
+                        "href": wsurl
+                    }
+            featuretypeinfo["namespace"]["name"] = ws
+            featuretypeinfo["latLonBoundingBox"]=bbox_dummy
+            featuretypeinfo["nativeBoundingBox"]=bbox_dummy
+            featuretypeinfo["srs"] = bbox_dummy["crs"]
+            featuretypeinfo["projectionPolicy"] = "FORCE_DECLARED" 
+            
+            templateFeatureType ={"featureType": {"name": layer,
+                                                  
+                    "nativeName": layer,
+                     "abstract":abstract,
+                    "title": layer,
+                    "keywords": {
+                        "string": [
+                            "features",
+                            layer
+                        ]
+                    },
+                    "srs": srs}
+            }
+            
+
+            
+            templateFeatureType["featureType"]["namespace"] = {
+                        "name": ws,
+                        "href": f"{resstart}namespaces/{ws}{wsend}"
+                    }
+            
+            templateFeatureType["featureType"]["store"] = {
+                        "@class": "dataStore",
+                        "name": "{}:{}".format(storeconfig["workspace"]["name"],storeconfig["name"]),
+                        "href": wsurl
+                    }
+            
+            templateFeatureType["featureType"]["attributes"]={"attribute":[]}
+            
+            res = gsclient.createFeatureTypeOnDatastore(ws,store,{"featureType":featuretypeinfo})#,**{"header_params": {"Content-Type":"application/json"}})
+        
+            #res = gsclient.updateFeatureType(ws,store,layer,templateFeatureType, **{"query_params":{"recalculate":"nativebbox,latlonbbox"}})#,**{"header_params": {"Content-Type":"application/json"}})
+    
+    
+            logme(res)
+    
+    
+    if defaultStyle:
+        gsclient.setLayerDefaultStyle(quote(layer),defaultStyle)
+        
+    return ws,store, layer
     
 def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle = None, **kwargs):
     
-    gsclient.createWorkspace(ws)
+    gsclient.testWorkspace(ws)
     
     storedef = {
     "coverageStore": {
