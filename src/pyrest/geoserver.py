@@ -531,20 +531,22 @@ class GSAPIClient(ApiClient):
     
     def buildStyle(self,styleName,  zipdata = None,workspace = None):#, headers = {"Content-Type":"application/zip"}):
         '''
-        rasterType can be of imagemosaic, geotiff
+        style can be of json, xml or a zip package
         
         zipdata is binary data already!!!
         
         '''
-        postfix = f"/{styleName}"
+        
+        q = None
+        if styleName:
+            q = {"name":styleName}
         headers = {"Content-Type":"application/xml"}
         if zipdata :
             if isinstance(zipdata,bytes):
                 headers = {"Content-Type":"application/zip"}
-                postfix = ""
+                
             elif isinstance(zipdata,str):
-                try:
-                    
+                try:                
                     styledata = json.loads(zipdata)
                     headers = {"Content-Type":"application/json"}
                     
@@ -556,9 +558,9 @@ class GSAPIClient(ApiClient):
                         
         
         if workspace:
-            stores = self.call_api(f"/workspaces/{workspace}/styles", GSAPIClient.POST,body=zipdata,header_params=headers)
+            stores = self.call_api(f"/workspaces/{workspace}/styles", GSAPIClient.POST,body=zipdata,header_params=headers,query_params=q)
         else:    
-            stores = self.call_api(f"/styles", GSAPIClient.POST,body=zipdata,header_params=headers)
+            stores = self.call_api(f"/styles", GSAPIClient.POST,body=zipdata,header_params=headers,query_params=q)
         return stores
 
 
