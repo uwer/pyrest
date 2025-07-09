@@ -598,6 +598,10 @@ class GSAPIClient(ApiClient):
         return res
     
     
+    def getWorkspaces(self, **kwargs):
+        ws = self.call_api(f"/workspaces", GSAPIClient.GET)
+        return ws
+        
 class GSAuthClient(GSAPIClient):
         
     def __init__(self,apiconnection):
@@ -666,7 +670,7 @@ class GSOWSClient(GSAPIClient):
         return None
     
 
-def createAndPublishFeature(gsclient,ws,store, layer, datafile, ftype = "shp",abstract="", doconfigure= False, srs="EPSG:4326", defaultStyle = 'None', **kwargs):
+def createAndPublishFeature(gsclient,ws,store, layer, datafile, ftype = "shp",abstract="", doconfigure= False, srs="EPSG:4326", defaultStyle = None, **kwargs):
     
     gsclient.testWorkspace(ws)
     
@@ -760,6 +764,29 @@ def createAndPublishFeature(gsclient,ws,store, layer, datafile, ftype = "shp",ab
     
             logme(res)
     
+    
+    if defaultStyle:
+        gsclient.setLayerDefaultStyle(quote(layer),defaultStyle)
+        
+    return ws,store, layer
+
+
+def createAndPublishCoverage(gsclient,ws,store, layer, datafile, rasterType = "geotiff",abstract="",  defaultStyle = 'None', **kwargs):
+
+    gsclient.testWorkspace(ws)
+    
+    
+    storeconfig  = gsclient.getCoverageStore(ws,store)
+    if not storeconfig:
+        from pathlib import Path
+        fnamep = Path(datafile)
+        with fnamep.open('rb') as fp:
+            res = gsclient.buildCoverageStoreAndType(ws,store,fp.read(),rasterType=rasterType)
+            print(res)
+        storeconfig  = gsclient.getFeatureStore(ws,store)
+        if  storeconfig is None:
+            raise ValueError("creating Feature Store failed")
+        
     
     if defaultStyle:
         gsclient.setLayerDefaultStyle(quote(layer),defaultStyle)

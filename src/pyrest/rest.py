@@ -33,6 +33,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+#from requests.auth import HTTPDigestAuth,HTTPBasicAuth
 
 class RESTResponse(io.IOBase):
 

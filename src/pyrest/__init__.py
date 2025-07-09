@@ -1,7 +1,15 @@
 __version__ = '0.9.0'
 
 import contextlib
-import time, os,datetime, sys
+import time, os,datetime, sys, re
+
+
+NM2KM=1.852
+HOUR2SEC=3600.
+DAYS2SEC=HOUR2SEC*24.
+
+UUID_PATTERN = re.compile(r'^[\da-f]{8}-([\da-f]{4}-){3}[\da-f]{12}$')
+
 
 @contextlib.contextmanager
 def stopwatch(message, context):
@@ -37,3 +45,56 @@ def ensureURLPath(url, pathstr):
             return  url+pathstr[1:]
         
     return url+ pathstr
+
+
+
+
+
+def uuid():
+    from uuid_extensions import uuid7str
+    return uuid7str()
+
+    
+def isValidUUID(str_uuid):
+    # VERSION AGNOSTIC
+    return  bool(str_uuid and UUID_PATTERN.match(str_uuid.lower()))
+
+
+def isValidString(strval):
+    if not strval:
+        return False
+    
+    return len(str(strval).strip()) > 0;
+
+def inferParse(targettype,value):
+    
+    
+    if targettype == int:
+        return float(int(value))
+    
+    if targettype == float:
+        return float(value)
+    
+    
+    if targettype == datetime.date:
+        return datetime.datetime.fromisoformat(str(value)).date()
+
+    if targettype == datetime.datetime:
+        return datetime.datetime.fromisoformat(str(value)) 
+    
+    return str(value)
+
+def mergeJson(dict0, dict1):
+    
+    if not isinstance(dict1,dict):
+        return True
+    
+    for k in dict1:
+        if k in dict0:
+            if mergeJson(dict0[k],dict1[k]):
+                dict0[k]= dict1[k]
+        else:
+            dict0[k]= dict1[k]
+            
+    return False
+    

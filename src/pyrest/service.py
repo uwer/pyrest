@@ -230,6 +230,35 @@ def app():
         raise e
 
     
+def test(delegate):
+    
+    try:
+        
+        from fastapi import FastAPI
+        
+        
+        app = FastAPI()
+        # test if the delegate implements routes itself, otherwise we assume a handler that is callable
+        if isinstance(delegate,Routable):
+            routes = delegate
+            if not hasattr(routes, "router"):
+                print ("Found Routable but it appears not to have a 'router', did you forget to call super().__init__()?!")
+                raise ValueError("Found Routable, not setup properly! (did you forget to call super.init)")
+        else:
+            routes = APIDelegate(delegate)
+            
+        # router member inherited from cr.Routable and configured per the annotations.
+        app.include_router(routes.router)
+        
+        import uvicorn
+        uvicorn.run(app,host="0.0.0.0", port=int(float(os.getenv('HANDLERPORT','9088'))) )
+        
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise e
+    
     
 def main():
     ##This is only for testing !!!! 
