@@ -13,6 +13,8 @@ pom_registry = None
 pom_context = None
 pom_push_url = None
 
+def hasProm():
+    return not pom_server is None
 
 '''
 from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
