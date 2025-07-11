@@ -3,8 +3,8 @@
 
 
 import datetime, sys, os, pathlib, time
-from pyrest.utils import ObservableThread, mergeJsonFiles,RepeatTimer
-from pyrest import uuid, stopwatch
+from pyrest.utils import ObservableThread, mergeJsonFiles,RepeatTimer,loadFromJsonFileList
+from pyrest import uuid, stopwatch,logme
 from classy_fastapi import ( Routable, 
                              get,delete,
                              put, post
@@ -217,20 +217,25 @@ class BaseHandler(Routable):
     
     def __init__(self, props):
         super().__init__() # otherwise this will fail 
-        print("Init handler ...", file=sys.stderr, flush=True)
+        logme("Init handler ...")
         self._properties = props
-        if "file-config" in props:
+        
+         
+        if "file-config" in props: 
+            # check if we have a list of config files, if so merge them 
             configpath = os.path.expandvars(props["file-config"])
-            print (f"using config collection {configpath}")
+            logme (f"using config collection {configpath}")
             if "config-history" in props:
                 try:
                     
-                    fdname = mergeJsonFiles(os.path.expandvars(props["file-config"]))
+                    fdname,self._properties = mergeJsonFiles(os.path.expandvars(props["file-config"]))
                     p = pathlib.Path(fdname)
                     p.rename(props["config-history"])
                 except Exception as e:
-                    print(f"creating history config faild {e}")
-                    
+                    logme(f"creating history config faild {e}")
+            else:
+                self._properties = loadFromJsonFileList(configpath)
+            
             os.environ["FILE_CONFIG"] = configpath
             os.environ["OP_MODE"] = "file"
 
