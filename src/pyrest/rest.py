@@ -33,7 +33,12 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-
+DEBUG = os.getenv("DEBUG",'0')
+if len(str(DEBUG )) > 0:
+    DEBUG  = str(DEBUG).lower()[0] in ['t','1','y']
+else:
+    DEBUG = False
+    
 class RESTResponse(io.IOBase):
 
     def __init__(self, resp):
@@ -156,6 +161,9 @@ class RESTClient(object):
         #if 'Content-Type' not in headers:
         if not any([re.search('Content-Type', h, re.IGNORECASE) for h in headers]):
             headers['Content-Type'] = 'application/json'
+
+        if DEBUG:
+            print(f"building URL for {method} as {url} with body {True if body else False } headers {headers} query {query_params} ")
 
         try:
             # For `POST`, `PUT`, `PATCH`, `OPTIONS`, `DELETE`
