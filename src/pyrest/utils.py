@@ -1,6 +1,6 @@
 
 import json, os, datetime
-from pyrest import stopwatch
+from pyrest import stopwatch,logme
 
 def loadJsonAndResolve(f):
     '''
@@ -46,17 +46,27 @@ def mergeJsonDicts(jsondicts):
     return primdict
     
     
-def mergeJsonFiles(fpaths):
-    import tempfile
+def loadFromJsonFileList(fpaths):
     
     jsonfs = fpaths.split(",")
     if len(jsonfs) == 1:
-        return fpaths
+        try:
+            with open(fpaths,'r') as fp:
+                return json.load(fp)
+        except Exception as e:
+            logme(f"faied loading config file as jspn {e}")
+            return {}
     
-    primdict = mergeJsonFromFiles(jsonfs)
+    return mergeJsonFromFiles(jsonfs)
+    
+    
+def mergeJsonFiles(fpaths):
+    import tempfile
+    
+    primdict = loadFromJsonFileList(fpaths)
     fd = tempfile.NamedTemporaryFile(prefix="config_merged",mode='w',delete=False)
     json.dump(primdict,fd, indent=2)
-    return fd.name
+    return fd.name,primdict
         
         
 

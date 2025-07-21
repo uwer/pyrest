@@ -91,6 +91,41 @@ class APIDelegate(Routable):
             
             return None
         
+
+    @get('/search', response_model=Any)
+    def search(self,request: Request = ...) :
+        """
+        lookup against handler 
+        """
+        from pyrest import stopwatch
+        #print("lookup  - {} ".format(request))
+        try:
+            with stopwatch("search",""):
+                return self._handler('search',query=request.query_params)
+    
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            
+            return None
+        
+    @get('/raw', response_model=Any)
+    def raw(self,request: Request = ...) :
+        """
+        lookup against handler 
+        """
+        from pyrest import stopwatch
+        #print("lookup  - {} ".format(request))
+        try:
+            with stopwatch("raw",""):
+                return self._handler('raw',query=request.query_params)
+    
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            
+            return None
+        
         
 
     @put('/process/data', response_model=None)

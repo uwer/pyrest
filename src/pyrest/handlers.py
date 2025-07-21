@@ -3,8 +3,8 @@
 
 
 import datetime, sys, os, pathlib, time
-from pyrest.utils import ObservableThread, mergeJsonFiles,RepeatTimer
-from pyrest import uuid, stopwatch
+from pyrest.utils import ObservableThread, mergeJsonFiles,RepeatTimer,loadFromJsonFileList
+from pyrest import uuid, stopwatch,logme
 from classy_fastapi import ( Routable, 
                              get,delete,
                              put, post
@@ -26,23 +26,33 @@ class MessageStore():
     
     
     @staticmethod
-    def getInstance():
+    def getInstance(store_loader = None):
         
         if MessageStore.__instance is None:
-            MessageStore.__instance = MessageStore()
+            MessageStore.__instance = MessageStore(store_loader)
             
         return MessageStore.__instance
     
     
-    def __init__(self):
+    def __init__(self, store_loader = None):
+        '''
+        store_loader is a facility that provides a mechanism to store/pickle and reload the state of the registry
+        it must provide a callable that takes 2 arguments - 
+        - action (set, get)
+        - the objec t to store or none
+        '''
         self._registry = {}
         
         
-        from npp.config import config
-        sreg = config.metaStoreGet("message-store")
-        if not sreg is None:
-            self._registry = sreg
+        self._store_loader = store_loader
         
+        if not store_loader is None:
+            if hasattr(store_loader, "get"):
+                self._registry = store_loader.get("message-store")
+            elif callable(store_loader):
+                self._registry = store_loader("get","message-store")
+                
+                
         self._cleanupTimer = RepeatTimer(3600, self.__cleanup,86400)
         # for testing 30 sec
         self._storeTimer = RepeatTimer(30, self.__store,10)
@@ -86,12 +96,20 @@ class MessageStore():
 
 
     def __store(self):
+        
+        if  self._store_loader is None:
+            return
+
+                
         if self._storring:
             return
         try:
             self._storring = True
-            from npp.config import config
-            config.metaStoreSet("message-store", self._registry)
+            if hasattr(self._store_loader, "get"):
+                self._store_loader.set("message-store",self._registry)
+            elif callable(self._store_loader):
+                self._store_loader("set","message-store",self._registry)
+
         except Exception as e:
             print(e)
             
@@ -179,31 +197,49 @@ class MessageStore():
  NOTE - the clients expect that the return is always a dict including a 'success' flag, so {"somekey":data, "success":True}
 '''
 class BaseHandler(Routable):
+    '''
+    
+    The base handler that adds access to the message store, add the following to the extending class to 
+    make calls avai;able in inheriting class
+     
+    
+    get_last_message = super().get_last_message
+    get_messages = super().get_messages
+    get_messages_all = super().get_messages_all
+    delete_message = super().delete_message
+    delete_messages_before = super().delete_messages_before
+    get_ended = super().get_ended
+    get_results = super().get_results
+    
+    
+    '''
+    
     
     def __init__(self, props):
         super().__init__() # otherwise this will fail 
-        print("Init handler ...", file=sys.stderr, flush=True)
+        logme("Init handler ...")
         self._properties = props
-        if "npp-file-config" in props:
-            configpath = os.path.expandvars(props["npp-file-config"])
-            print (f"using config collection {configpath}")
+        
+         
+        if "file-config" in props: 
+            # check if we have a list of config files, if so merge them 
+            configpath = os.path.expandvars(props["file-config"])
+            logme (f"using config collection {configpath}")
             if "config-history" in props:
                 try:
                     
-                    fdname = mergeJsonFiles(os.path.expandvars(props["npp-file-config"]))
+                    fdname,self._properties = mergeJsonFiles(os.path.expandvars(props["file-config"]))
                     p = pathlib.Path(fdname)
                     p.rename(props["config-history"])
                 except Exception as e:
-                    print(f"creating history config faild {e}")
-                    
-            os.environ["NPP_FILE_CONFIG"] = configpath
-            os.environ["NPP_OP_MODE"] = "file"
-        elif "npp-kube-config" in props:
-            os.environ["NPP_KUBE_CONFIG"] = os.path.expandvars(props["npp-kube-config"])
-            os.environ["NPP_OP_MODE"] = "kubeernetes"
+                    logme(f"creating history config faild {e}")
+            else:
+                self._properties = loadFromJsonFileList(configpath)
             
-        
-        from npp.config import config # force loading
+            os.environ["FILE_CONFIG"] = configpath
+            os.environ["OP_MODE"] = "file"
+
+
             
     @get('/test', response_model= Any)
     def get_test(self) :
