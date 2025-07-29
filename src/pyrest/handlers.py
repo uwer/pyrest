@@ -200,16 +200,16 @@ class BaseHandler(Routable):
     '''
     
     The base handler that adds access to the message store, add the following to the extending class to 
-    make calls avai;able in inheriting class
+    make calls available in inheriting class (at the class level)
      
     
-    get_last_message = super().get_last_message
-    get_messages = super().get_messages
-    get_messages_all = super().get_messages_all
-    delete_message = super().delete_message
-    delete_messages_before = super().delete_messages_before
-    get_ended = super().get_ended
-    get_results = super().get_results
+    get_status_message = BaseHandler.get_status_message
+    get_messages = BaseHandler.get_messages
+    get_messages_all = BaseHandler.get_messages_all
+    delete_message = BaseHandler.delete_message
+    delete_messages_before = BaseHandler.delete_messages_before
+    get_ended = BaseHandler.get_ended
+    get_results = BaseHandler.get_results
     
     
     '''
@@ -251,7 +251,7 @@ class BaseHandler(Routable):
             return {"error":str(e),"success":False}
         
     @get('/messages/status/{messageid}', response_model= Any)
-    def get_last_message(self, messageid:str = Path(..., alias='messageid')) :
+    def get_status_message(self, messageid:str = Path(..., alias='messageid')) :
         
         with stopwatch("get'/messages/status"):
             
