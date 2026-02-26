@@ -501,7 +501,7 @@ class ApiClient(object):
         self.update_params_for_auth(header_params, query_params, auth_settings)
         url = self.configuration.host + resource_path
         
-        return url, post_params,query_params,path_params,header_params
+        return [[url, post_params,query_params,path_params,header_params],200,""]
         
 
     def __call_api(
@@ -697,7 +697,7 @@ class ApiClient(object):
                  body=None, post_params=None, files=None,
                  response_type=object, auth_settings=None, async_req=None,
                  _return_http_data_only=False, collection_formats=None,
-                 _preload_content=True, _request_timeout=None, _raise_error= False):
+                 _preload_content=True, _request_timeout=None, _raise_error= False , _dry_run = False):
         """Makes the HTTP request (synchronous) and returns deserialized data.
 
         To make an async request, set the async_req parameter.
@@ -727,6 +727,7 @@ class ApiClient(object):
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
                                  (connection, read) timeouts.
+                                
         :return:
             If async_req parameter is True,
             the request will be called asynchronously.
@@ -734,6 +735,15 @@ class ApiClient(object):
             If parameter async_req is False or missing,
             then the method will return the response directly.
         """
+        
+        if _dry_run:
+            return self.__test_setup(resource_path, method,
+                                   path_params, query_params, header_params,
+                                   body, post_params, files,
+                                   response_type, auth_settings,
+                                   _return_http_data_only, collection_formats,
+                                   _preload_content, _request_timeout, _raise_error)
+            
         if not async_req:
             return self.__call_api(resource_path, method,
                                    path_params, query_params, header_params,
@@ -910,6 +920,9 @@ class ApiClient(object):
         :param querys: Query parameters tuple list to be updated.
         :param auth_settings: Authentication setting identifiers list.
         """
+        
+        
+            
         if not auth_settings:
             return
 
@@ -926,6 +939,7 @@ class ApiClient(object):
                     raise ValueError(
                         'Authentication token must be in `query` or `header`'
                     )
+        
                     
     def clean_params_for_auth(self, headers, auth_settings):
         """removes header and params based on authentication setting.

@@ -1,0 +1,20 @@
+{
+	"instance": {
+		"class": "pyrest.geometries.TimeZones"
+	},
+	"config": {
+		"geometries": "/app/timezones-with-oceans.2.fgb",
+		"match-keys": {"search": {
+			"lat": "lat",
+			"lon": "lon"
+		}
+		
+	},
+	"required": {
+		"search": [
+			"lat",
+			"lon"
+		]
+	}
+}
+}

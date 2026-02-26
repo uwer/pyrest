@@ -1,0 +1,14 @@
+The lookup docker file is a basic sub to run simple REST services, given the json config it will allow loading accessible service classes to perform as of Nov 2023 2 srequests 
+'lookup' and 'process', the target class needs to know what to do with that.
+
+run s 
+docker run -v "<path to config>:/app/config.json" -v "<any other data mapped in config>:<where its mapped to in config inside the container>" -e HANDLERPORT=9088   lookup/rest:<context>
+
+i.e. geom council areas 
+NOTE REPLACE TAGS
+docker run -it  -e HANDLERPORT=9099 -p 9099:9099 -v "<REPLACE PATH TO CONFIG>/oz_gov_zones.json:/app/config.json" -v "<REPLACE PATH TO DATA>:/app/data/" pyrest/lookup-base bash
+
+DATAFILES are not included here
+
+Alternatively,
+make a context specific container ontop of the base container copying the data files in   

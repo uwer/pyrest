@@ -92,7 +92,11 @@ bbox_dummy = {"minx":115.1689999999999969,
                   "crs": "EPSG:4326"}
 
 
-time_dim_enable_XML = ['<coverage><name>','</name><enabled>true</enabled><metadata><entry key="time"><dimensionInfo><enabled>true</enabled><presentation>LIST</presentation><units>ISO8601</units></dimensionInfo></entry></metadata></coverage>']
+# replace storeName and timeVar through format as
+#  time_dim_enable_XML.format(storeName=<>,timeVar=<>)
+time_dim_enable_XML = '<coverage><name>{storeName}</name><enabled>true</enabled><metadata><entry key="{timeVar}"><dimensionInfo><enabled>true</enabled><presentation>LIST</presentation><units>ISO8601</units></dimensionInfo></entry></metadata></coverage>'
+
+elevation_dim_enable_XML = '<coverage><name>{storeName}</name><enabled>true</enabled><metadata><entry key="{elevationVar}"><dimensionInfo><enabled>true</enabled><presentation>LIST</presentation><units>meters</units></dimensionInfo></entry></metadata></coverage>'
 
 
 
@@ -188,17 +192,29 @@ def _buildCreatePGStore(connection):
         
         
 class GSAPIClient(ApiClient):
+    '''
+    REST client to interact with the GeoServer REST API
     
+    
+    '''
     def __init__(self,apiconnection):
+        '''
+        nIntiate the client with a configuration object, minimum arguments to be supplied
+        By default verify ssl is turned off
+        url - the full url of the target 
+        
+        '''
         self._apiconnection = apiconnection
        
         self.configuration = Configuration()
         self.configuration.host = self._apiconnection["url"]
-        self.configuration.verify_ssl = False
+        self.configuration.username = self._apiconnection.get("username",None)
+        self.configuration.password = self._apiconnection.get("password",None)
+        self.configuration.verify_ssl = self._apiconnection.get("verify-ssl",False)
         self.configuration.setTimeout(10,60)
         #self.configuration.connection_pool_maxsize = 2
         #'content-type': 'application/json; charset=utf-8'
-        ApiClient.__init__(self, self.configuration,maxpool=2)# this is the default ,header_name='content-type', header_value='application/json; charset=utf-8')
+        ApiClient.__init__(self, self.configuration,maxpool=self._apiconnection.get("max-pool",2))# this is the default ,header_name='content-type', header_value='application/json; charset=utf-8')
         
         #,self._query_api_key_name:_query_api_key
 
@@ -218,7 +234,7 @@ class GSAPIClient(ApiClient):
                  body=None, post_params=None, files=None,
                  response_type=object, auth_settings=None, async_req=None,
                  _return_http_data_only=True, collection_formats=None,
-                 _preload_content=True, _request_timeout=None, _raise_error= False):
+                 _preload_content=True, _request_timeout=None, _raise_error= False, _dry_run = False):
         
         if header_params:
             if not "accept" in header_params:
@@ -232,7 +248,7 @@ class GSAPIClient(ApiClient):
                                   path_params, query_params, header_params, 
                                   body, post_params, files, response_type, 
                                   auth_settings, async_req, False, collection_formats, 
-                                  _preload_content, _request_timeout, False)
+                                  _preload_content, _request_timeout, _raise_error=_raise_error,_dry_run=_dry_run)
         
         #print(result)
         if not 200 <= result[1] < 299:
@@ -304,7 +320,6 @@ class GSAPIClient(ApiClient):
         '''
         zipdata is binary data already!!!
         '''
-        from pathlib import Path
         
         stores = self.call_api(f"/workspaces/{workspaceName}/datastores/{storeName}/file.{ftype}", GSAPIClient.PUT,
                                body=zipdata,header_params=headers,query_params=query)
@@ -315,8 +330,8 @@ class GSAPIClient(ApiClient):
         store = self.call_api(f"/workspaces/{workspaceName}/datastores", GSAPIClient.POST,body=data)
         return store
     
-    def getCoverage(self, workspaceName,coverage):
-        layers = self.call_api(f"/workspaces/{workspaceName}/coverages/{coverage}", GSAPIClient.GET)
+    def getCoverage(self, workspaceName,coverage, qfilter = None):
+        layers = self.call_api(f"/workspaces/{workspaceName}/coverages/{coverage}", GSAPIClient.GET, query_params=qfilter)
         return layers
     
     def getCoverageForStore(self, workspaceName,storeName,coverage):
@@ -324,8 +339,8 @@ class GSAPIClient(ApiClient):
         return layers
     
     
-    def getCoverageExtensionForStore(self, workspaceName,storeName,coverage, extension, filter = {}):
-        layers = self.call_api(f"/workspaces/{workspaceName}/coveragestores/{storeName}/coverages/{coverage}/{extension}.json", GSAPIClient.GET, query_params=filter)
+    def getCoverageExtensionForStore(self, workspaceName,storeName,coverage, extension, qfilter = {}):
+        layers = self.call_api(f"/workspaces/{workspaceName}/coveragestores/{storeName}/coverages/{coverage}/{extension}.json", GSAPIClient.GET, query_params=qfilter)
         return layers
     
     
@@ -337,8 +352,8 @@ class GSAPIClient(ApiClient):
         stores = self.call_api(f"/workspaces/{workspaceName}/coveragestores/{storeName}", GSAPIClient.GET)
         return stores
     
-    def updateCoverageStore(self,workspaceName,storeName, data):
-        stores = self.call_api(f"/workspaces/{workspaceName}/coveragestores/{storeName}", GSAPIClient.PUT,body=data)
+    def updateCoverageStore(self,workspaceName,storeName, data,headers = {"Content-Type":"text/xml"}):
+        stores = self.call_api(f"/workspaces/{workspaceName}/coveragestores/{storeName}", GSAPIClient.PUT,body=data,header_params=headers)
         return stores
     
     def updateCoverage(self,workspaceName,storeName, data, headers = {"Content-Type":"text/xml"}):
@@ -599,23 +614,18 @@ class GSAPIClient(ApiClient):
     
     
     def getWorkspaces(self, **kwargs):
-        ws = self.call_api(f"/workspaces", GSAPIClient.GET)
+        ws = self.call_api(f"/workspaces", GSAPIClient.GET,**kwargs)
         return ws
         
 class GSAuthClient(GSAPIClient):
         
+    
     def __init__(self,apiconnection):
         
         GSAPIClient.__init__(self, apiconnection)
         self._query_api_key_name = self._apiconnection["auth"]
         self._query_api_key = self._apiconnection["auth-key"]
         
-        
-
-        
-        
-        
-
     
     def call_api(self, resource_path, method,
              path_params=None, query_params=None, header_params=None,
@@ -771,8 +781,15 @@ def createAndPublishFeature(gsclient,ws,store, layer, datafile, ftype = "shp",ab
     return ws,store, layer
 
 
-def createAndPublishCoverage(gsclient,ws,store, layer, datafile, rasterType = "geotiff",abstract="",  defaultStyle = 'None', **kwargs):
 
+def createAndPublishCoverage(gsclient,ws,store, layer, datafile, rasterType = "geotiff",abstract="",  defaultStyle = None, **kwargs):
+    '''
+    Upload an coverage and create a store,
+    optionally also enable COG, ensure the file is actually cloud-optimized
+    
+    content-type
+    "image/tiff; application=geotiff” -H “Content-Profile: http://www.opengis.net/def/profile/geotiff/cloud-optimized”
+    '''
     gsclient.testWorkspace(ws)
     
     
@@ -781,12 +798,46 @@ def createAndPublishCoverage(gsclient,ws,store, layer, datafile, rasterType = "g
         from pathlib import Path
         fnamep = Path(datafile)
         with fnamep.open('rb') as fp:
-            res = gsclient.buildCoverageStoreAndType(ws,store,fp.read(),rasterType=rasterType)
-            print(res)
-        storeconfig  = gsclient.getFeatureStore(ws,store)
+            res = gsclient.buildCoverageStoreAndType(ws,store,rasterType,fp.read(),headers = {"Content-Type":"image/tiff"})
+            #print(res)
+        storeconfig  = gsclient.getCoverageStore(ws,store)
         if  storeconfig is None:
             raise ValueError("creating Feature Store failed")
+        elif kwargs and "isCOG" in kwargs:
+            if not "metadata" in storeconfig["coverageStore"]:
+                storeconfig["coverageStore"]["metadata"] = {}
+            storeconfig["coverageStore"]["metadata"]["entry"] = {        
+                    "@key": "CogSettings.Key",
+                    "cogSettings": {
+                        "useCachingStream": False,
+                        "rangeReaderSettings": "HTTP"
+                    }
+                }
+            
+            res = gsclient.updateCoverageStore(ws,store,storeconfig,headers = {"Content-Type":"application/json"})
+    else:
+        #print(json.dumps(storeconfig))
+        #layerconfig = gsclient.getCoverage(ws,layer)
+        #print(json.dumps(layerconfig))
         
+        if kwargs and "isCOG" in kwargs:
+            if "metadata" in storeconfig["coverageStore"] and "entry" in storeconfig["coverageStore"]["metadata"]:
+                return  ws,store, layer
+        
+            if not "metadata" in storeconfig["coverageStore"]:
+                storeconfig["coverageStore"]["metadata"] = {}
+                
+            storeconfig["coverageStore"]["metadata"]["entry"] = {        
+                    "@key": "CogSettings.Key",
+                    "cogSettings": {
+                        "useCachingStream": False,
+                        "rangeReaderSettings": "HTTP"
+                    }
+                }
+            res = gsclient.updateCoverageStore(ws,store,storeconfig,headers = {"Content-Type":"application/json"})
+            
+            
+    
     
     if defaultStyle:
         gsclient.setLayerDefaultStyle(quote(layer),defaultStyle)
@@ -844,7 +895,7 @@ def createAndPublishCOG(gsclient,ws,store, layer, url, abstract="", defaultStyle
         gsclient.setLayerDefaultStyle(layer,defaultStyle)
     
     
-def createCOGImageStore(gsclient,tempdir, workspaceName,storeName, imagelist,baseurl, timepattern='[0-9]{8}'):
+def createCOGImageStoreRemote(gsclient,tempdir, workspaceName,storeName, imagelist, baseurl,timepattern='[0-9]{8}'):
     '''
     not working as expected ....
     
@@ -923,6 +974,129 @@ def createCOGImageStore(gsclient,tempdir, workspaceName,storeName, imagelist,bas
         
     
     
+def createCOGImageStorePrepared(gsclient, workspaceName,storeName, zipdata, enableDims ):
+    
+    
+    res = gsclient.buildCoverageStoreAndType(workspaceName,storeName,"imagemosaic", zipdata ,params={"configure":"none"})
+    print(res)
+    
+    res = gsclient.getCoverage(workspaceName,storeName,qfilter= {'list':'all'})
+    logme(res)
+    
+    
+    if "time" in enableDims:
+        res = gsclient.updateCoverage(workspaceName,storeName,
+                                  time_dim_enable_XML.format(storeName=storeName,timeVar=enableDims["time"]))
+        
+    if "elevation"in enableDims:
+        res = gsclient.updateCoverage(workspaceName,storeName,
+                                  elevation_dim_enable_XML.format(storeName=storeName,elevationVar=enableDims["elevation"]))
+        
+    
+    
+    
+        
+def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,storeName, imagelist, timepattern='[0-9]{8}', params={}):
+    '''
+    not working as expected ....
+    
+    '''
+    
+    from pathlib import Path
+    import os
+    tmppdir = Path(tempdir)
+    
+    tmppdir.mkdir(parents=True, exist_ok=True)
+    
+
+    
+    
+    with tmppdir.joinpath("indexer.properties").open('w') as fp:
+        #fp.write('Cog=true\n')
+        #fp.write('SuggestedSPI=it.geosolutions.imageioimpl.plugins.cog.CogImageReaderSpi')
+        fp.write('PropertyCollectors=TimestampFileNameExtractorSPI[timeregex](ingestion)\n')
+        fp.write('Schema=*the_geom:Polygon,location:String,ingestion:java.util.Date\n')
+        #fp.write('CanBeEmpty=true\n')
+        #fp.write(f'Name={storeName}\n')
+        #fp.write('PathType=RELATIVE\n')
+        fp.write('TimeAttribute=ingestion\n')
+        #fp.write(f'Wildcard=*{imagelist[0].suffix}')
+        
+        
+    # or timepattern
+    with tmppdir.joinpath("timeregex.properties").open('w') as fp:
+        fp.write(f'regex={timepattern}\n')
+        
+    with tmppdir.joinpath(f"{storeName}.properties").open('w') as fp:
+        fp.write('PathType=RELATIVE\n')
+        fp.write('TimeAttribute=time\n')
+        fp.write('ExpandToRGB=false\n')
+        fp.write(f'TypeName={storeName}\n')
+        fp.write(f'Name={storeName}\n')
+        fp.write('SuggestedFormat=org.geotools.gce.geotiff.GeoTiffFormat\n')
+        fp.write('SuggestedSPI=it.geosolutions.imageioimpl.plugins.tiff.TIFFImageReaderSpi\n')
+        #fp.write('LevelsNum=1\n')
+        fp.write('Heterogeneous=false\n')
+        fp.write('HeterogeneousCRS=false\n')
+        fp.write('CheckAuxiliaryMetadata=false\n')
+        fp.write('MosaicCRS=EPSG:4326\n')
+        for k in params:
+            fp.write(f'{k}={params[k]}\n')
+        
+        
+    
+    zipfile_name = str(tmppdir.joinpath(storeName.replace(' ','')+".zip"))
+    import zipfile
+    zip = zipfile.ZipFile(zipfile_name, "w", zipfile.ZIP_DEFLATED)
+    cwd = os.getcwd()
+    os.chdir(str(tmppdir))
+    zip.write("indexer.properties")
+    zip.write("timeregex.properties")
+    #zip.write(f"{storeName}.properties")
+    
+    for imag in imagelist:
+        zip.write(str(imag),imag.name)
+    
+    
+    zip.close()
+    os.chdir(cwd)
+    
+    
+    with open(zipfile_name,"rb") as fp:
+        zipdata= fp.read()
+    
+    # ignore if exists
+    res = gsclient.createWorkspace(workspaceName)
+    logme(res)
+    
+    
+    res = gsclient.buildCoverageStoreAndType(workspaceName,storeName,"imagemosaic", zipdata ,params={"configure":"none"})
+    print(res)
+    
+    
+    #res = gsclient.createCoverageProtoypeRemote(workspaceName,storeName,imagelist[0].name)
+    #logme(res)
+    
+    
+    
+    
+    
+    
+    res = gsclient.updateCoverage(workspaceName,storeName,
+                                  time_dim_enable_XML.format(storeName=storeName,timeVar="time"))
+                                  
+    logme(res)
+    
+    # add the rest of the references, we should have at least 2 ...
+    #for i in range(1,len(imagelist)):
+    #    res = gsclient.createCoverageProtoypeRemote(workspaceName,storeName,imagelist[i].name)
+    #    logme(res)
+    
+    
+        
+    res = gsclient.getCoverage(workspaceName,storeName,qfilter= {'list':'all'})
+    logme(res)
+    
     
     
     
@@ -986,5 +1160,5 @@ def buildLayer(owsurl, protocol, layer,extents =None):
     return f"{owsurl}?{qstring}"
 
 
-            
+         
     

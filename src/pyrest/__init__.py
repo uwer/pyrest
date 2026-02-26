@@ -12,7 +12,7 @@ UUID_PATTERN = re.compile(r'^[\da-f]{8}-([\da-f]{4}-){3}[\da-f]{12}$')
 
 
 @contextlib.contextmanager
-def stopwatch(message, context):
+def stopwatch(message, context=""):
     """Context manager to print how long a block of code took."""
     t0 = time.time()
     try:
@@ -34,6 +34,7 @@ def ensureProtocol(urlstr):
     
 def ensureURLPath(url, pathstr):
     url = ensureProtocol(url)
+    pathstr = str(pathstr)
     if not pathstr or len(pathstr) <1:
         return url
     

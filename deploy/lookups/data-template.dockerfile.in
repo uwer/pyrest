@@ -1,0 +1,10 @@
+FROM pyrest/lookup-base
+# labels pyrest/lookup-geom:<CONTEXT>
+
+# build as 
+# docker build -t pyrest/lookup-geom:<CONTEXT> --build-arg DATAF=pwd/<path to data dir> --build-arg CONFF=pwd/<path to config file> -f <data dockerfile> .
+
+ARG DATAF
+ARG CONFF
+COPY ${CONFF} /app/config.json
+COPY ${DATAF}/* /app/data/
