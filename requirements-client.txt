@@ -2,3 +2,4 @@ six
 certifi
 urllib3
 httpx
+uuid7

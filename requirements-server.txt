@@ -11,3 +11,5 @@ click
 sniffio
 python-multipart
 prometheus-client
+stdio-proxy
+uuid7

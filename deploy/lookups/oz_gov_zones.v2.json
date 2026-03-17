@@ -1,0 +1,67 @@
+{
+	"instance": {
+		"class": "pyrest.geometries.Geometries"
+	},
+	"config": {
+		"geometries": "/app/data/OZlocalSA1.fgb",
+		"lookup": {
+			"SA1_MAIN11": "/app/data/OZlocalSA1.csv",
+			"SA2_MAIN11": "/app/data/OZlocalSA2.csv",
+			"SA3_CODE11": "/app/data/OZlocalSA3.csv"
+		},
+	"match-keys": {
+		"search": {
+			"lat": "lat",
+			"lon": "lon",
+			"buffer": "buffer"
+		},
+		"raw": {
+			"lat": "lat",
+			"lon": "lon",
+			"buffer": "buffer"
+		},
+		"lookup": {
+			"SA1_MAIN11": [
+				"SA1_MAIN11",
+				"SA2_MAIN11",
+				"SA2_NAME11",
+				"STE_CODE11",
+				"STE_NAME11",
+				"GCC_CODE11",
+				"GCC_NAME11",
+				"ALBERS_SQM"
+			],
+			"SA2_MAIN11": [
+				"SA2_MAIN11",
+				"SA2_NAME11",
+				"SA3_NAME11",
+				"STE_CODE11",
+				"STE_NAME11",
+				"GCC_CODE11",
+				"GCC_NAME11",
+				"ALBERS_SQM"
+			],
+			"SA3_CODE11": [
+				"SA3_CODE11",
+				"SA3_NAME11",
+				"SA4_NAME11",
+				"STE_CODE11",
+				"STE_NAME11",
+				"GCC_CODE11",
+				"GCC_NAME11",
+				"ALBERS_SQM"
+			]
+		}
+	},
+	"required": {
+		"search": [
+			"lat",
+			"lon"
+		],
+		"raw": [
+			"lat",
+			"lon"
+		]
+	}
+}
+}

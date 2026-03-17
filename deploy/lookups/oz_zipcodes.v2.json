@@ -1,0 +1,46 @@
+{
+	"instance": {
+		"class": "pyrest.geometries.Geometries"
+	},
+	"config": {
+		"geometries": "/app/data/zipcodes-2021-wgs84.fgb",
+		"lookups":{
+		"POA_CODE21": "/app/data/zipcodes-2021-wgs84.csv"
+		},
+		
+	"match-keys": {
+		"search": {
+			"lat": "lat",
+			"lon": "lon",
+			"buffer": "buffer"
+		},
+		"raw": {
+			"lat": "lat",
+			"lon": "lon",
+			"buffer": "buffer"
+		},
+		"lookup": {
+		"POA_CODE21": [
+				"POA_CODE21",
+				"POA_NAME21",
+				"SHAPE_Leng",
+				"SHAPE_Area",
+				"AREASQKM21",
+				"GCC_CODE11",
+				"GCC_NAME11",
+				"ALBERS_SQM"
+			]
+		}
+	},
+	"required": {
+		"search": [
+			"lat",
+			"lon"
+		],
+		"raw": [
+			"lat",
+			"lon"
+		]
+	}
+}
+}

@@ -17,13 +17,11 @@ import ssl
 import tempfile
 
 import mimetypes
-from six.moves.urllib.parse import quote
+from urllib.parse import quote
 import datetime
 from multiprocessing.pool import ThreadPool
 import certifi
-# python 2 and python 3 compatibility library
-import six
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlencode
 
 try:
     import urllib3
@@ -32,7 +30,14 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
+DEBUG = os.getenv("DEBUG",'0')
+if len(str(DEBUG )) > 0:
+    DEBUG  = str(DEBUG).lower()[0] in ['t','1','y']
+else:
+    DEBUG = False
 
+
+#from requests.auth import HTTPDigestAuth,HTTPBasicAuth
 DEBUG = os.getenv("DEBUG",'0')
 if len(str(DEBUG )) > 0:
     DEBUG  = str(DEBUG).lower()[0] in ['t','1','y']
@@ -151,7 +156,7 @@ class RESTClient(object):
 
         timeout = None
         if _request_timeout:
-            if isinstance(_request_timeout, (int, ) if six.PY3 else (int, long)):  # noqa: E501,F821
+            if isinstance(_request_timeout, int):  # noqa: E501,F821
                 timeout = urllib3.Timeout(total=_request_timeout)
             elif (isinstance(_request_timeout, tuple) and
                   len(_request_timeout) == 2):
@@ -388,10 +393,10 @@ class ApiClient(object):
         to the API
     """
 
-    PRIMITIVE_TYPES = (float, bool, bytes, six.text_type) + six.integer_types
+    PRIMITIVE_TYPES = (float, bool, bytes, str, int)
     NATIVE_TYPES_MAPPING = {
         'int': int,
-        'long': int if six.PY3 else long,  # noqa: F821
+        'long': int ,  # noqa: F821
         'float': float,
         'str': str,
         'bool': bool,
@@ -430,10 +435,12 @@ class ApiClient(object):
         self.user_agent = 'APYC-1.0.0' # deliberately nonsense
 
     def __del__(self):
-        if hasattr(self, 'pool') and self.pool:
-            self.pool.close()
-            self.pool.join()
-
+        try:
+            if hasattr(self, 'pool') and self.pool:
+                self.pool.close()
+                self.pool.join()
+        except:
+            pass
     @property
     def user_agent(self):
         """User agent for this API client"""
@@ -500,7 +507,7 @@ class ApiClient(object):
         self.update_params_for_auth(header_params, query_params, auth_settings)
         url = self.configuration.host + resource_path
         
-        return url, post_params,query_params,path_params,header_params
+        return [[url, post_params,query_params,path_params,header_params],200,""]
         
 
     def __call_api(
@@ -618,13 +625,13 @@ class ApiClient(object):
             # Convert attribute name to json key in
             # model definition for request.
             obj_dict = {obj.attribute_map[attr]: getattr(obj, attr)
-                        for attr, _ in six.iteritems(obj.swagger_types)
+                        for attr, _ in obj.swagger_types.items()
                         if getattr(obj, attr) is not None}
             
         
 
         return {key: self.sanitize_for_serialization(val)
-                for key, val in six.iteritems(obj_dict)}
+                for key, val in obj_dict.items()}
 
     def deserialize(self, response, response_type):
         """Deserializes response into an object.
@@ -668,7 +675,7 @@ class ApiClient(object):
             if klass.startswith('dict('):
                 sub_kls = re.match(r'dict\(([^,]*), (.*)\)', klass).group(2)
                 return {k: self.__deserialize(v, sub_kls)
-                        for k, v in six.iteritems(data)}
+                        for k, v in data.items()}
 
             # convert str to class
             if klass in self.NATIVE_TYPES_MAPPING:
@@ -696,7 +703,7 @@ class ApiClient(object):
                  body=None, post_params=None, files=None,
                  response_type=object, auth_settings=None, async_req=None,
                  _return_http_data_only=False, collection_formats=None,
-                 _preload_content=True, _request_timeout=None, _raise_error= False):
+                 _preload_content=True, _request_timeout=None, _raise_error= False , _dry_run = False):
         """Makes the HTTP request (synchronous) and returns deserialized data.
 
         To make an async request, set the async_req parameter.
@@ -726,6 +733,7 @@ class ApiClient(object):
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
                                  (connection, read) timeouts.
+                                
         :return:
             If async_req parameter is True,
             the request will be called asynchronously.
@@ -733,6 +741,15 @@ class ApiClient(object):
             If parameter async_req is False or missing,
             then the method will return the response directly.
         """
+        
+        if _dry_run:
+            return self.__test_setup(resource_path, method,
+                                   path_params, query_params, header_params,
+                                   body, post_params, files,
+                                   response_type, auth_settings,
+                                   _return_http_data_only, collection_formats,
+                                   _preload_content, _request_timeout, _raise_error)
+            
         if not async_req:
             return self.__call_api(resource_path, method,
                                    path_params, query_params, header_params,
@@ -822,7 +839,7 @@ class ApiClient(object):
         new_params = []
         if collection_formats is None:
             collection_formats = {}
-        for k, v in six.iteritems(params) if isinstance(params, dict) else params:  # noqa: E501
+        for k, v in params.items() if isinstance(params, dict) else params:  # noqa: E501
             if k in collection_formats:
                 collection_format = collection_formats[k]
                 if collection_format == 'multi':
@@ -855,7 +872,7 @@ class ApiClient(object):
             params = post_params
 
         if files:
-            for k, v in six.iteritems(files):
+            for k, v in files.items():
                 if not v:
                     continue
                 file_names = v if type(v) is list else [v]
@@ -909,6 +926,9 @@ class ApiClient(object):
         :param querys: Query parameters tuple list to be updated.
         :param auth_settings: Authentication setting identifiers list.
         """
+        
+        
+            
         if not auth_settings:
             return
 
@@ -925,6 +945,7 @@ class ApiClient(object):
                     raise ValueError(
                         'Authentication token must be in `query` or `header`'
                     )
+        
                     
     def clean_params_for_auth(self, headers, auth_settings):
         """removes header and params based on authentication setting.
@@ -988,7 +1009,7 @@ class ApiClient(object):
         try:
             return klass(data)
         except UnicodeEncodeError:
-            return six.text_type(data)
+            return str(data)
         except TypeError:
             return data
 
@@ -1054,7 +1075,7 @@ class ApiClient(object):
 
         kwargs = {}
         if klass.swagger_types is not None:
-            for attr, attr_type in six.iteritems(klass.swagger_types):
+            for attr, attr_type in klass.swagger_types.items():
                 if (data is not None and
                         klass.attribute_map[attr] in data and
                         isinstance(data, (list, dict))):
