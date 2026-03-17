@@ -12,7 +12,8 @@ from copy import deepcopy
 from pyrest import logme, ensureURLPath
 from six.moves.urllib.parse import quote
 
-import sys,json
+import sys,json,os
+
 
 templatePostgisStore = {
   "dataStore": {
@@ -250,6 +251,8 @@ class GSAPIClient(ApiClient):
                                   auth_settings, async_req, False, collection_formats, 
                                   _preload_content, _request_timeout, _raise_error=_raise_error,_dry_run=_dry_run)
         
+        
+
         #print(result)
         if not 200 <= result[1] < 299:
             #print(result[0])
@@ -350,6 +353,10 @@ class GSAPIClient(ApiClient):
     
     def getCoverageStore(self,workspaceName,storeName):
         stores = self.call_api(f"/workspaces/{workspaceName}/coveragestores/{storeName}", GSAPIClient.GET)
+        return stores
+    
+    def testCoverageStore(self,workspaceName,storeName):
+        stores = self.call_api(f"/workspaces/{workspaceName}/coveragestores/{storeName}", GSAPIClient.GET,query_params={"quietOnNotFound":True})
         return stores
     
     def updateCoverageStore(self,workspaceName,storeName, data,headers = {"Content-Type":"text/xml"}):
@@ -975,7 +982,8 @@ def createCOGImageStoreRemote(gsclient,tempdir, workspaceName,storeName, imageli
     
     
 def createCOGImageStorePrepared(gsclient, workspaceName,storeName, zipdata, enableDims ):
-    
+    # clean up the naming as GS interpretes sub-patrs of the naming 
+    storeName = storeName.replace(".","").replace("-","_")
     
     res = gsclient.buildCoverageStoreAndType(workspaceName,storeName,"imagemosaic", zipdata ,params={"configure":"none"})
     print(res)
@@ -995,10 +1003,13 @@ def createCOGImageStorePrepared(gsclient, workspaceName,storeName, zipdata, enab
     
     
     
+
         
-def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,storeName, imagelist, timepattern='[0-9]{8}', params={}):
+def createCOGImageStoreVectors(gsclient,tempdir, workspaceName,storeName, imagelist,  params={},defaultStyle = None):
     '''
-    not working as expected ....
+    build an imagemosaic with a temporal dimension, 
+    it relies on the file name contains an interpretable timestamp identifiable by the re timepattern
+    timepattern may also have a format component describing how to interpret the date pattern 
     
     '''
     
@@ -1008,7 +1019,7 @@ def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,storeName, image
     
     tmppdir.mkdir(parents=True, exist_ok=True)
     
-
+    storeName = storeName.replace(' ','').replace(".","").replace("-","_")
     
     
     with tmppdir.joinpath("indexer.properties").open('w') as fp:
@@ -1020,7 +1031,7 @@ def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,storeName, image
         #fp.write(f'Name={storeName}\n')
         #fp.write('PathType=RELATIVE\n')
         fp.write('TimeAttribute=ingestion\n')
-        #fp.write(f'Wildcard=*{imagelist[0].suffix}')
+        fp.write(f'Wildcard=*{imagelist[0].suffix}')
         
         
     # or timepattern
@@ -1045,7 +1056,7 @@ def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,storeName, image
         
         
     
-    zipfile_name = str(tmppdir.joinpath(storeName.replace(' ','')+".zip"))
+    zipfile_name = str(tmppdir.joinpath(storeName+".zip"))
     import zipfile
     zip = zipfile.ZipFile(zipfile_name, "w", zipfile.ZIP_DEFLATED)
     cwd = os.getcwd()
@@ -1097,8 +1108,120 @@ def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,storeName, image
     res = gsclient.getCoverage(workspaceName,storeName,qfilter= {'list':'all'})
     logme(res)
     
+    if defaultStyle:
+        gsclient.setLayerDefaultStyle(quote(storeName),defaultStyle)
     
     
+        
+def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,storeName, imagelist, timepattern='[0-9]{8}', params={},defaultStyle = None):
+    '''
+    build an imagemosaic with a temporal dimension, 
+    it relies on the file name contains an interpretable timestamp identifiable by the re timepattern
+    timepattern may also have a format component describing how to interpret the date pattern 
+    
+    '''
+    
+    from pathlib import Path
+    import os
+    tmppdir = Path(tempdir)
+    
+    tmppdir.mkdir(parents=True, exist_ok=True)
+    
+    storeName = storeName.replace(' ','').replace(".","").replace("-","_")
+    
+    
+    with tmppdir.joinpath("indexer.properties").open('w') as fp:
+        #fp.write('Cog=true\n')
+        #fp.write('SuggestedSPI=it.geosolutions.imageioimpl.plugins.cog.CogImageReaderSpi')
+        fp.write('PropertyCollectors=TimestampFileNameExtractorSPI[timeregex](ingestion)\n')
+        fp.write('Schema=*the_geom:Polygon,location:String,ingestion:java.util.Date\n')
+        #fp.write('CanBeEmpty=true\n')
+        #fp.write(f'Name={storeName}\n')
+        #fp.write('PathType=RELATIVE\n')
+        fp.write('TimeAttribute=ingestion\n')
+        fp.write(f'Wildcard=*{imagelist[0].suffix}')
+        
+        
+    # or timepattern
+    with tmppdir.joinpath("timeregex.properties").open('w') as fp:
+        fp.write(f'regex={timepattern}\n')
+        
+    with tmppdir.joinpath(f"{storeName}.properties").open('w') as fp:
+        fp.write('PathType=RELATIVE\n')
+        fp.write('TimeAttribute=time\n')
+        fp.write('ExpandToRGB=false\n')
+        fp.write(f'TypeName={storeName}\n')
+        fp.write(f'Name={storeName}\n')
+        fp.write('SuggestedFormat=org.geotools.gce.geotiff.GeoTiffFormat\n')
+        fp.write('SuggestedSPI=it.geosolutions.imageioimpl.plugins.tiff.TIFFImageReaderSpi\n')
+        #fp.write('LevelsNum=1\n')
+        fp.write('Heterogeneous=false\n')
+        fp.write('HeterogeneousCRS=false\n')
+        fp.write('CheckAuxiliaryMetadata=false\n')
+        fp.write('MosaicCRS=EPSG:4326\n')
+        for k in params:
+            fp.write(f'{k}={params[k]}\n')
+        
+        
+    
+    zipfile_name = str(tmppdir.joinpath(storeName+".zip"))
+    import zipfile
+    zip = zipfile.ZipFile(zipfile_name, "w", zipfile.ZIP_DEFLATED)
+    cwd = os.getcwd()
+    os.chdir(str(tmppdir))
+    zip.write("indexer.properties")
+    zip.write("timeregex.properties")
+    #zip.write(f"{storeName}.properties")
+    
+    for imag in imagelist:
+        zip.write(str(imag),imag.name)
+    
+    
+    zip.close()
+    os.chdir(cwd)
+    
+    
+    with open(zipfile_name,"rb") as fp:
+        zipdata= fp.read()
+    
+    # ignore if exists
+    res = gsclient.testWorkspace(workspaceName)
+    logme(res)
+    
+    
+    res = gsclient.buildCoverageStoreAndType(workspaceName,storeName,"imagemosaic", zipdata ,params={"configure":"none"})
+    print(res)
+    
+    
+    #res = gsclient.createCoverageProtoypeRemote(workspaceName,storeName,imagelist[0].name)
+    #logme(res)
+    
+    
+    
+    
+    
+    
+    res = gsclient.updateCoverage(workspaceName,storeName,
+                                  time_dim_enable_XML.format(storeName=storeName,timeVar="time"))
+                                  
+    logme(res)
+    
+    # add the rest of the references, we should have at least 2 ...
+    #for i in range(1,len(imagelist)):
+    #    res = gsclient.createCoverageProtoypeRemote(workspaceName,storeName,imagelist[i].name)
+    #    logme(res)
+    
+    
+        
+    res = gsclient.getCoverage(workspaceName,storeName,qfilter= {'list':'all'})
+    logme(res)
+    
+    if defaultStyle:
+        res = gsclient.getStyle(defaultStyle)
+        if not res is None:
+            gsclient.setLayerDefaultStyle(quote(storeName),defaultStyle)
+    
+    print (f"outfile {zipfile_name}")
     
 def __specsForProtocol(protocol):
     p = protocol.lower()
