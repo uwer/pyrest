@@ -36,8 +36,14 @@ if len(str(DEBUG )) > 0:
 else:
     DEBUG = False
 
-#from requests.auth import HTTPDigestAuth,HTTPBasicAuth
 
+#from requests.auth import HTTPDigestAuth,HTTPBasicAuth
+DEBUG = os.getenv("DEBUG",'0')
+if len(str(DEBUG )) > 0:
+    DEBUG  = str(DEBUG).lower()[0] in ['t','1','y']
+else:
+    DEBUG = False
+    
 class RESTResponse(io.IOBase):
 
     def __init__(self, resp):
