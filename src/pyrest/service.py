@@ -91,6 +91,41 @@ class APIDelegate(Routable):
             
             return None
         
+
+    @get('/search', response_model=Any)
+    def search(self,request: Request = ...) :
+        """
+        lookup against handler 
+        """
+        from pyrest import stopwatch
+        #print("lookup  - {} ".format(request))
+        try:
+            with stopwatch("search",""):
+                return self._handler('search',query=request.query_params)
+    
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            
+            return None
+        
+    @get('/raw', response_model=Any)
+    def raw(self,request: Request = ...) :
+        """
+        lookup against handler 
+        """
+        from pyrest import stopwatch
+        #print("lookup  - {} ".format(request))
+        try:
+            with stopwatch("raw",""):
+                return self._handler('raw',query=request.query_params)
+    
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            
+            return None
+        
         
 
     @put('/process/data', response_model=None)
@@ -229,6 +264,35 @@ def app():
         traceback.print_exc()
         raise e
 
+    
+def test(delegate):
+    
+    try:
+        
+        from fastapi import FastAPI
+        
+        
+        app = FastAPI()
+        # test if the delegate implements routes itself, otherwise we assume a handler that is callable
+        if isinstance(delegate,Routable):
+            routes = delegate
+            if not hasattr(routes, "router"):
+                print ("Found Routable but it appears not to have a 'router', did you forget to call super().__init__()?!")
+                raise ValueError("Found Routable, not setup properly! (did you forget to call super.init)")
+        else:
+            routes = APIDelegate(delegate)
+            
+        # router member inherited from cr.Routable and configured per the annotations.
+        app.include_router(routes.router)
+        
+        import uvicorn
+        uvicorn.run(app,host="0.0.0.0", port=int(float(os.getenv('HANDLERPORT','9088'))) )
+        
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise e
     
     
 def main():

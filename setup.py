@@ -14,7 +14,6 @@ setup(
     author='UR',
     author_email='ur@gmail.com',
     install_requires=[
-        "six",
         "certifi",  
         "urllib3", 
         "httpx",   

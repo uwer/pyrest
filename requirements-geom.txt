@@ -1,0 +1,10 @@
+-r requirements-server.txt
+
+shapely
+pandas
+pytz
+
+
+netCDF4
+cftime
+xarray

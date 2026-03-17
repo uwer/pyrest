@@ -1,0 +1,23 @@
+{
+	"instance": {
+		"class": "pyrest.netcdf.NetcdfAssessment"
+	},
+	"config": {
+		"container": {
+			"type": "<entries from container map>",
+			"args": {
+				"filepath":"/app/data/netcdf.nc",
+				"varnames":[],
+				"coordinatenames":["lon","lat"] }
+			
+		},
+		"match-keys": {
+			"lon": "<the matching variable name for longitude>",
+			"lat": "<the matching variable name for latitude>"
+		},
+		"context-keys": {
+			"value": "<the key returned for the value found>",
+			"context": "<additional key values returned >"
+		}
+	}
+}
