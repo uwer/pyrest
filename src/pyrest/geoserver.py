@@ -10,7 +10,7 @@ from pyrest.rest import ApiClient
 from pyrest.configuration import Configuration
 from copy import deepcopy
 from pyrest import logme, ensureURLPath
-from six.moves.urllib.parse import quote
+from urllib.parse import quote
 
 import sys,json,os
 

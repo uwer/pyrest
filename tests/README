@@ -1,0 +1,39 @@
+Test Files 
+File	Tests	Description
+tests/__init__.py	-	Package init
+tests/test_configuration.py	13	Tests for Configuration class
+tests/test_utils.py	26	Tests for utility functions
+tests/test_deltat.py	16	Tests for time parsing
+tests/test_rest.py	22	Tests for REST client
+tests/test_service.py	11	Tests for service handlers
+tests/test_handlers.py	13	Tests for message store
+tests/test_init.py	24	Tests for init utilities
+Test Configuration Files
+File	Description
+pytest.ini	Pytest configuration
+requirements-test.txt	Test dependencies
+Test Coverage
+Total test cases: 125+ tests
+Modules tested:
+pyrest.configuration - Configuration settings, API keys, auth
+pyrest.utils - JSON loading, merging, ObservableThread, RepeatTimer
+pyrest.deltat - Time duration parsing
+pyrest.rest - REST client, ApiClient, ApiException
+pyrest.service - EchoHandler, APIDelegate, class loading
+pyrest.handlers - MessageStore, BaseHandler
+pyrest (init) - URL helpers, UUID validation, type inference
+
+
+# Install test dependencies
+pip install -
+
+### Running Testsr requirements-test.txt
+
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_rest.py
+
+# Run with coverage
+pytest --cov=src/pyrest --cov-report=html
