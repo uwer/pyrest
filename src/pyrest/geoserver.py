@@ -1004,7 +1004,7 @@ def createCOGImageStorePrepared(gsclient, workspaceName,storeName, zipdata, enab
     
     
 
-        
+"""        
 def createCOGImageStoreVectors(gsclient,tempdir, workspaceName,storeName, imagelist,  params={},defaultStyle = None):
     '''
     build an imagemosaic with a temporal dimension, 
@@ -1111,13 +1111,28 @@ def createCOGImageStoreVectors(gsclient,tempdir, workspaceName,storeName, imagel
     if defaultStyle:
         gsclient.setLayerDefaultStyle(quote(storeName),defaultStyle)
     
-    
+"""    
         
-def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,storeName, imagelist, timepattern='[0-9]{8}', params={},defaultStyle = None):
+def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,
+                                storeName, imagelist, 
+                                timepattern='[0-9]{8}', params={},defaultStyle = None):
     '''
     build an imagemosaic with a temporal dimension, 
     it relies on the file name contains an interpretable timestamp identifiable by the re timepattern
     timepattern may also have a format component describing how to interpret the date pattern 
+    
+    parameters:
+    gsclient - an initiated instance of GSAPIClient
+    tempdir - thelocation for themporary data (it will no be deleted)
+    workspaceName - the geoserver workspace to associate the store with
+    storeName - the store and layer name
+    imagelist - the file list of geo-tif files to include
+    timepattern - the regex to extract the date from the filenames, if the extracted is not 
+                    a parsable date, the entry can include a format string (by Java SimpleDateFormat).
+                    like - '[0-9]{8},format=yyyyMMdd'
+                    NOTE - the default index using a shapefile only copes with dates, not datetime!!
+    params - only used if the store properties are included (disabled for now)
+    defaultStyle - the defaultStyle name, must exist
     
     '''
     
@@ -1146,6 +1161,7 @@ def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,storeName, image
     with tmppdir.joinpath("timeregex.properties").open('w') as fp:
         fp.write(f'regex={timepattern}\n')
         
+    '''
     with tmppdir.joinpath(f"{storeName}.properties").open('w') as fp:
         fp.write('PathType=RELATIVE\n')
         fp.write('TimeAttribute=time\n')
@@ -1162,7 +1178,7 @@ def createCOGImageStoreTemporal(gsclient,tempdir, workspaceName,storeName, image
         for k in params:
             fp.write(f'{k}={params[k]}\n')
         
-        
+    '''    
     
     zipfile_name = str(tmppdir.joinpath(storeName+".zip"))
     import zipfile
